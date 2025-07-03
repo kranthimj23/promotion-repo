@@ -174,20 +174,18 @@ def load_excel_sheets(file_path):
  
 def main():
     differences_file = '/Users/m26395/Documents/promo-helm-charts/zdt-cicd-module/scripts/differences.xlsx'  # Update with your actual path
-    target_file = '/Users/m26395/Downloads/AWS_Infra_Environment (5) copy 12.xlsx'    # Specify path to existing target file
+    target_file = '/Users/m26395/Downloads/AWS_Infra_Environment (5) copy 14.xlsx'    # Specify path to existing target file
     # output_file = '/Users/m26395/Downloads/updatehigher-UAT1_drx.xlsx'  # Specify output path for new file
  
     # Load differences from Excel file
     differences = load_excel_sheets(differences_file)
     differences_df = differences["differences"]
  
-    # Update the target Excel file based on differences
+ 
     updated_workbook = update_target_file(differences_df, target_file)
-    # updated_workbook = updated_workbook.dropna(how='all')
-    # Save the updated Workbook back to a new Excel file
-    # save_updated_file(updated_workbook, output_file)
+  
     print(f"Updated target file saved to {target_file}")
  
 if __name__ == "__main__":
     main()
- 
+    
