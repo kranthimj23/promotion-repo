@@ -104,7 +104,7 @@ pipeline {
                     steps {
                         script {
                             if (env.X1_BRANCH && env.X2_BRANCH) {
-                                configFileProvider([configFile(fileId: 'create-release-note', targetLocation: 'create-release-note.py'), configFile(fileId: 'db-scripts-merger', targetLocation: 'database_scripts_merger.py')]) {
+                                configFileProvider([configFile(fileId: 'create-release-note', targetLocation: 'create-release-note.py'), configFile(fileId: 'database_scripts_merger', targetLocation: 'database_scripts_merger.py')]) {
                                         withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                                         sh 'chmod +x database_scripts_merger.py'
                                         echo "create-release-note.py is getting executed with these parameters: ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url}"
