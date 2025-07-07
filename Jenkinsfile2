@@ -1,0 +1,100 @@
+//This script implements the below logic:
+//1) Checks if the release-note is updated based on the commit history.
+//2) If the release-note is updated, then generate the config.
+
+
+pipeline {
+
+    agent // add the label
+ 
+    environment {
+        GIT_CREDENTIALS_ID = '' //add the jenkins credentials
+        PYTHON_EXEC = 'python3.11'  // or your python executable path
+
+    }
+ 
+    // Declare executePython at pipeline level to share across stages
+
+    // Use a script block to initialize it
+
+    options { skipDefaultCheckout() }  // Optional: skip automatic checkout if you want manual control
+    stages {
+        stage('Checkout with credentials') {
+            steps {
+                deleteDir()
+                script {
+                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: "*/main"]],
+                        userRemoteConfigs: [[
+                            url: "${env.github_url}",
+                            credentialsId: GIT_CREDENTIALS_ID
+                        ]]
+                        ])
+                    }
+                }
+            }
+        }
+ 
+ 
+        stage('Check commits in release_note') {
+            steps {
+                script {
+                    echo "Checking commits in folder: release_note"
+                    def commits = sh(
+                        script: "git log -n 10 --pretty=format:\"%H|%s\" -- release_note/*.xlsx",
+                        returnStdout: true
+                    ).trim()
+ 
+                    echo "Recent commits affecting Excel files in ${env.RELEASE_NOTE_DIR}:"
+                    echo commits
+ 
+                    def pattern = ~("Updated the release note in the branch: " + env.promotion_branch)
+                    // Use a pipeline variable to share state
+                    // Initialize executePython if not yet defined
+
+                    if (!binding.hasVariable('executePython')) {
+                        executePython = false
+                    }
+ 
+                    commits.split('\n').each { line ->
+                        def parts = line.split('\\|', 2)
+                        if (parts.length == 2) {
+                            def commitMsg = parts[1]
+                            echo "Checking commit message: ${commitMsg}"
+                            if ((commitMsg =~ pattern).matches()) {
+                                echo "Found matching commit message: ${commitMsg}"
+                                executePython = true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+ 
+        stage('Run Python scripts') {
+            steps {
+                script {
+                    if (executePython) {
+                        configFileProvider([configFile(fileId: 'generate-config', targetLocation: 'generate-config.py')]) {
+                            withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                            def result = sh(
+                                script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch} ${env.lower_env}",
+                                returnStdout: true
+                            ).trim()
+                            echo result
+                            }
+                        }
+
+                    } else {
+                        echo "No matching commit messages found. Skipping Python script execution."
+                        error("No matching commit message found.")
+                    }
+                }
+            }
+        }
+    }
+}
+
+ 
