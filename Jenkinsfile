@@ -8,7 +8,7 @@ pipeline {
     agent any // add your jenkins agent
     environment {
         PYTHON_EXEC = 'python3.12'  // Or adjust to 'python' if needed
-        GIT_CREDENTIALS_ID = 'jenkins-token' //add your github credentials 
+        GIT_CREDENTIALS_ID = credentials('jenkins-token') //add your github credentials 
     }
 
     stages {
@@ -17,12 +17,14 @@ pipeline {
                 script {
                     // Set Git username and email for Jenkins environment
                     sh "git config --global user.name 'kranthimj23'"
-                    sh "git config --global user.email 'kranthimj23'"
-                    sh "git config list"
+                    sh "git config --global user.email 'kranthimj23@gmail.com'"
+                    sh "git config --list"
                 }
             }
-        }
-
+         }
+                    
+                    
+                    
         stage('Checkout with credentials') {
             steps {
                 deleteDir()
@@ -42,26 +44,27 @@ pipeline {
         stage('Fetch Branch') {
             steps {
                     configFileProvider([configFile(fileId: 'merger', targetLocation: 'merger.py')]) {
-                        script {
-                            def result = sh(
-                                script: "${env.PYTHON_EXEC} merger.py ${env.lower_env} ${env.higher_env} ${env.github_url} ${env.new_version}",
-                                returnStdout: true,
-                            ).trim()
+                        withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                            script {
+                                def result = sh(
+                                        script: "${env.PYTHON_EXEC} merger.py ${env.lower_env} ${env.higher_env} ${env.github_url} ${env.new_version}",
+                                        returnStdout: true,
+                                    ).trim()
 
-                            echo "Wait time of 5 secs"
-                            sleep time: 5, unit: 'SECONDS'
+                                    echo "Wait time of 5 secs"
+                                    sleep time: 5, unit: 'SECONDS'
 
-                            def (x1, x2, low, high, isNew) = result.tokenize(',').collect { it?.trim() ?: '' }
-                            env.X1_BRANCH = x1
-                            env.X2_BRANCH = x2
-                            env.LOWER_ENV = low
-                            env.HIGHER_ENV = high
-                            env.NEW_BRANCH = isNew?.toLowerCase() ?: 'false'
-
+                                    def (x1, x2, low, high, isNew) = result.tokenize(',').collect { it?.trim() ?: '' }
+                                    env.X1_BRANCH = x1
+                                    env.X2_BRANCH = x2
+                                    env.LOWER_ENV = low
+                                    env.HIGHER_ENV = high
+                                    env.NEW_BRANCH = isNew?.toLowerCase() ?: 'false'
+                                }
+                            }
                         }
                     }
-                }
-            }
+        }
 
         stage('Wait1') {
             steps {
@@ -76,8 +79,10 @@ pipeline {
                     if (env.NEW_BRANCH?.toLowerCase() == 'true') {
                         echo "Triggering Push-Files-To-Branch job for new branch: ${env.X2_BRANCH}"
                         configFileProvider([configFile(fileId: 'values-promotion', targetLocation: 'values-promotion.py')]) {
-                            echo "${env.PYTHON_EXEC} values-promotion.py ${env.X2_BRANCH}"
-                            sh "${env.PYTHON_EXEC} values-promotion.py ${env.X2_BRANCH}"
+                            withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                                echo "${env.PYTHON_EXEC} values-promotion.py ${env.X2_BRANCH}"
+                                sh "${env.PYTHON_EXEC} values-promotion.py ${env.X2_BRANCH}"
+                            }
                         }
                     } else {
                         echo "Skipping Push-Files-To-Branch because NEW_BRANCH is not 'true'. Got: '${env.NEW_BRANCH}'"
@@ -98,9 +103,11 @@ pipeline {
                     script {
                         if (env.X1_BRANCH && env.X2_BRANCH) {
                             configFileProvider([configFile(fileId: 'create-release-note', targetLocation: 'create-release-note.py'), configFile(fileId: 'database_scripts_merger', targetLocation: 'database_scripts_merger.py')]) {
-                                sh 'chmod +x database_scripts_merger.py'
-                                echo "create-release-note.py is getting executed with these parameters: ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url}"
-                                sh "${env.PYTHON_EXEC} create-release-note.py ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url} database_scripts_merger.py"
+                                withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                                    sh 'chmod +x database_scripts_merger.py'
+                                    echo "create-release-note.py is getting executed with these parameters: ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url}"
+                                    sh "${env.PYTHON_EXEC} create-release-note.py ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url} database_scripts_merger.py"
+                                } 
                             }
                         } else {
                             echo "Skipping Push-Files-To-Branch because NEW_BRANCH is not 'true'. Got: '${env.NEW_BRANCH}'"
