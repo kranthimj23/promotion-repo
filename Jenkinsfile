@@ -29,15 +29,15 @@ pipeline {
             steps {
                 deleteDir()
                 script {
-                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                         checkout([
                             $class: 'GitSCM',
                             branches: [[name: "*/main"]],
                             userRemoteConfigs: [[
-                                url: "https://${GIT_TOKEN}@github.com/kranthimj23/promotion-repo.git"
+                                url: "${env.github_url}",
+                                credentialsId: GIT_CREDENTIALS_ID
                             ]]
                         ])
-                    }
+                    
                 }
             }
         }
