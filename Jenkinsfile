@@ -5,7 +5,7 @@
 
  
 pipeline {
-    agent { label any } // add your jenkins agent
+    agent any // add your jenkins agent
     environment {
         PYTHON_EXEC = 'python3.12'  // Or adjust to 'python' if needed
         GIT_CREDENTIALS_ID = 'jenkins-token' //add your github credentials 
