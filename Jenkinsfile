@@ -11,33 +11,20 @@ pipeline {
         GIT_CREDENTIALS_ID = credentials('jenkins-token') //add your github credentials 
     }
 
-    stages {
-     stage('Set Git Config') {
-            steps {
-                script {
-                    // Set Git username and email for Jenkins environment
-                    sh "git config --global user.name 'kranthimj23'"
-                    sh "git config --global user.email 'kranthimj23@gmail.com'"
-                    sh "git config --list"
-                }
-            }
-         }
-                    
-                    
-                    
+    stages {            
         stage('Checkout with credentials') {
             steps {
                 deleteDir()
                 script {
+                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                         checkout([
                             $class: 'GitSCM',
                             branches: [[name: "*/main"]],
                             userRemoteConfigs: [[
-                                url: "${env.github_url}",
-                                credentialsId: GIT_CREDENTIALS_ID
+                                url: "https://${GIT_TOKEN}@github.com/kranthimj23/promotion-repo.git"
                             ]]
                         ])
-                    
+                    }
                 }
             }
         }
