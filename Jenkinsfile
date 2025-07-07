@@ -18,6 +18,7 @@ pipeline {
                     // Set Git username and email for Jenkins environment
                     sh "git config --global user.name 'kranthimj23'"
                     sh "git config --global user.email 'kranthimj23'"
+                    sh "git config list"
                 }
             }
         }
