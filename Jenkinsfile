@@ -83,7 +83,7 @@ pipeline {
                                 configFileProvider([configFile(fileId: 'values-promotion', targetLocation: 'values-promotion.py')]) {
                                     withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                                     echo "${env.PYTHON_EXEC} values-promotion.py ${env.X2_BRANCH}"
-                                    sh "${env.PYTHON_EXEC} values-promotion.py ${env.X2_BRANCH}"
+                                    sh "${env.PYTHON_EXEC} values-promotion.py ${env.github_url} ${env.X2_BRANCH}"
                                     }
                                 }
                             } else {
