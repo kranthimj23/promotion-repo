@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         PYTHON_EXEC = 'python3.12'  // Or adjust to 'python' if needed
-        GIT_CREDENTIALS_ID = 'jenkins-token'
+        GIT_CREDENTIALS_ID = 'jenkins-unp-token'
     }
  
     stages {
