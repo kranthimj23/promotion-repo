@@ -1,0 +1,1 @@
+The files of /tmp/tmparespch5/new_branch/helm-charts/uat-values are stored here
