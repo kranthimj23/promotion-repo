@@ -34,7 +34,7 @@ pipeline {
                             $class: 'GitSCM',
                             branches: [[name: "*/dev"]],
                             userRemoteConfigs: [[
-                                url: "https://${GIT_TOKEN}@github.com/kranthimj23/service-user.git"
+                                url: "https://${GIT_TOKEN}@github.com/kranthimj23/promotion-repo.git"
                             ]]
                         ])
                     }
