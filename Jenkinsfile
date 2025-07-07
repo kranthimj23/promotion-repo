@@ -29,14 +29,15 @@ pipeline {
             steps {
                 deleteDir()
                 script {
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: "*/main"]],
-                        userRemoteConfigs: [[
-                            url: "${env.github_url}",
-                            credentialsId: GIT_CREDENTIALS_ID
-                        ]]
-                    ])
+                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: "*/dev"]],
+                            userRemoteConfigs: [[
+                                url: "https://${GIT_TOKEN}@github.com/kranthimj23/service-user.git"
+                            ]]
+                        ])
+                    }
                 }
             }
         }
