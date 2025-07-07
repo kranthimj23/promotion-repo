@@ -12,6 +12,16 @@ pipeline {
     }
 
     stages {
+     stage('Set Git Config') {
+            steps {
+                script {
+                    // Set Git username and email for Jenkins environment
+                    sh "git config --global user.name 'kranthimj23'"
+                    sh "git config --global user.email 'kranthimj23'"
+                }
+            }
+        }
+
         stage('Checkout with credentials') {
             steps {
                 deleteDir()
