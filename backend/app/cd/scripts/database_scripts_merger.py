@@ -97,8 +97,8 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
         wb.save(excel_path)
  
         # Commit and push changes
-        subprocess.run(['git', 'config', 'user.email', 'surabhi.h@qwerty.com'], cwd =repo_path ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', ''], cwd =repo_path, check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =repo_path ,check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd =repo_path, check=True, timeout=30)
         subprocess.run(['git', '-C', repo_path, 'add', 'meta-sheet.xlsx'], cwd =repo_path, check=True, capture_output=True, text=True)
         subprocess.run(['git', '-C', repo_path, 'commit', '-m',
                       f'Promote {promote_branch} from {lower_env} to {higher_env}'], cwd =repo_path, check=True,capture_output=True, text=True)
@@ -359,8 +359,8 @@ def merge_branches(branches, promotion_branch, aql_folder, sql_folder, lower_env
         merge_files(".sql", sql_folder, branches, promotion_branch)
  
         # Commit the changes
-        subprocess.run(['git', 'config', 'user.email', 'surabhi.h@qwerty.com'], cwd =os.getcwd() ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', ''],cwd =os.getcwd(), check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =os.getcwd() ,check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'],cwd =os.getcwd(), check=True, timeout=30)
         print("Committing changes...")
         subprocess.run(["git", "commit", "-m", "Merged AQL and SQL files from multiple branches"], cwd =os.getcwd() ,check=True, timeout=30)
  

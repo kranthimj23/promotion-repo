@@ -55,7 +55,7 @@ def find_last_updated_branch(sheet, col_idx):
 def create_new_branch(base_branch, new_version=None):
     if new_version:
         # Assuming branch format like PF-release/1.0.0, keep prefix and append new_version
-        prefix = base_branch.split('/')[0]
+        prefix = "release"
         new_branch = f"{prefix}/{new_version}"
     else:
         new_branch = f"{base_branch}_promotion_branch"
@@ -90,7 +90,7 @@ def fetch_branches(file_path, lower_env, update_lower_env, new_branch_created, h
     higher_branch, _ = find_last_updated_branch(sheet, higher_col)
     ##print(higher_branch)
  
-    if lower_env == 'dev2' and lower_branch!= 'X':
+    if lower_env == 'dev' and lower_branch!= 'X':
         if lower_branch == higher_branch:
             if not new_version:
                 raise ValueError("new_version must be provided when lower_env is 'dev'")
@@ -104,11 +104,11 @@ def fetch_branches(file_path, lower_env, update_lower_env, new_branch_created, h
             #print("lower branch != higher branch in dev ---> " , higher_branch, lower_branch)
             return higher_branch, lower_branch, update_lower_env, new_branch_created
     else:
-        if lower_env != 'dev2' and lower_branch == higher_branch:
+        if lower_env != 'dev' and lower_branch == higher_branch:
             new_branch = create_new_branch(lower_branch, new_version)
             update_lower_env = True
             #print(f"New branch is created values to be populated in Lower-env-->{update_lower_env}")
-            update_excel_with_new_branch(file_path, sheet, 'dev2', new_branch)
+            update_excel_with_new_branch(file_path, sheet, 'dev', new_branch)
             return lower_branch, new_branch, update_lower_env, new_branch_created
         else:
             #print(f"Branches differ. Promoting using existing branch '{lower_branch}' in '{lower_env}'.")
@@ -127,7 +127,7 @@ def clean_non_dev_folders(temp_dir):
         item_path = os.path.join(temp_dir, f"helm-charts")
         if folder == "helm-charts":
             for i in os.listdir(item_path):
-                if i.endswith('values'):    #and not i.startswith('dev2'):
+                if i.endswith('values'):    #and not i.startswith('dev'):
                     env_folders.append(i)
                     env_path = os.path.join(item_path, i)
  
@@ -169,21 +169,21 @@ def create_github_branch(github_url, base_branch, new_branch):
             check=True,timeout = 30, stdout=subprocess.DEVNULL
         )
  
- 
+        print(os.listdir(temp_dir))
         # Create and switch to new branch
         subprocess.run(['git', 'checkout', '-b', new_branch], cwd=new_branch_dir, check=True, timeout=30)
         # Clean  environment folders
         clean_non_dev_folders(new_branch_dir)
         #print(f"Created '{new_branch}' --------successfully")
         # Commit and push cleaned branch
-        subprocess.run(['git', 'config', 'user.email', ''], cwd=new_branch_dir, check=True, timeout=30,) # add the email-id
-        subprocess.run(['git', 'config', 'user.name', ''], cwd=new_branch_dir, check=True, timeout=30) # add the username
+        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd=new_branch_dir, check=True, timeout=30,)
+        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd=new_branch_dir, check=True, timeout=30)
         subprocess.run(['git', 'add', '.'], cwd=new_branch_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
         subprocess.run(
             ['git', 'commit', '-m', f'Initialize {new_branch}: Clean  environment folders'],
             cwd=new_branch_dir, check=True, timeout=30, stdout=subprocess.DEVNULL
         )
- 
+        print(os.listdir(new_branch_dir))
         result = subprocess.run(['git', 'push', 'origin', new_branch], cwd=new_branch_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
         #print(f"Created and cleaned branch '{new_branch}' successfully")
         # Update meta-sheet in master branch
@@ -197,7 +197,7 @@ def create_github_branch(github_url, base_branch, new_branch):
  
         # Find 'dev' column
         headers = [cell.value for cell in ws[1]]
-        dev_col = headers.index('dev2') + 1
+        dev_col = headers.index('dev') + 1
  
         # Find first empty row in dev column
         next_row = 2
@@ -218,8 +218,8 @@ def create_github_branch(github_url, base_branch, new_branch):
         wb.save(excel_path)
  
         # Commit and push changes
-        subprocess.run(['git', 'config', 'user.email', ''], cwd=master_dir, check=True, timeout=30, stdout=subprocess.DEVNULL) # add the email
-        subprocess.run(['git', 'config', 'user.name', ''], cwd=master_dir, check=True, timeout=30, stdout=subprocess.DEVNULL) # add the user
+        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd=master_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
+        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd=master_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
         subprocess.run(['git', 'add', 'meta-sheet.xlsx'], cwd=master_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
         subprocess.run(['git', 'commit', '-m', f'Add {new_branch} to meta-sheet'], cwd=master_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
         subprocess.run(['git', 'push', 'origin', 'master'], cwd=master_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
@@ -239,13 +239,24 @@ def create_github_branch(github_url, base_branch, new_branch):
 ########################################################################################################################
  
 def main():
-    repo_name = "promo-helm-charts"
+    repo_name = "promotion-repo"
     lower_env = sys.argv[1]                  # Change as needed
     higher_env = sys.argv[2]
     github_url = sys.argv[3]                # Change as needed
     new_version = sys.argv[4]              # Provide new version for dev branch creation
     target_folder = os.path.join(os.getcwd(), 'execution')
     os.makedirs(target_folder, exist_ok=True)
+    
+    github_token = os.getenv("GIT_TOKEN")
+    if github_token and "github.com" in github_url:
+        # Inject token into repo URL (safe for HTTPS GitHub URLs)
+        if github_url.startswith("https://"):
+            github_url = github_url.replace("https://", f"https://{github_token}@")
+        else:
+            raise ValueError("Unsupported repo_url format. Must start with https://")
+
+    
+    
     meta_sheet_file_path = os.path.join(target_folder,f"meta-sheet.xlsx")
     update_lower_env = False
     reverse_promotion = False
@@ -263,7 +274,7 @@ def main():
     envs = []
  
     if update_lower_env:
-        envs.append('dev2')
+        envs.append('dev')
         # envs.append(lower_env)
         envs.append(higher_env)
         reverse_promotion = True

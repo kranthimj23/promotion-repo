@@ -5,7 +5,7 @@
 
 pipeline {
 
-    agent { label '' } // add the label
+    agent // add the label
  
     environment {
         GIT_CREDENTIALS_ID = '' //add the jenkins credentials
@@ -23,17 +23,20 @@ pipeline {
             steps {
                 deleteDir()
                 script {
+                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                     checkout([
                         $class: 'GitSCM',
-                        branches: [[name: "${env.promotion_branch}"]],
+                        branches: [[name: "*/main"]],
                         userRemoteConfigs: [[
                             url: "${env.github_url}",
-                            credentialsId: "${GIT_CREDENTIALS_ID}"
+                            credentialsId: GIT_CREDENTIALS_ID
                         ]]
-                    ])
+                        ])
+                    }
                 }
             }
         }
+ 
  
         stage('Check commits in release_note') {
             steps {
@@ -75,11 +78,13 @@ pipeline {
                 script {
                     if (executePython) {
                         configFileProvider([configFile(fileId: 'generate-config', targetLocation: 'generate-config.py')]) {
+                            withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                             def result = sh(
                                 script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch} ${env.lower_env}",
                                 returnStdout: true
                             ).trim()
                             echo result
+                            }
                         }
 
                     } else {

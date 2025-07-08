@@ -519,8 +519,8 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
         wb.save(excel_path)
  
         # Commit and push changes to master branch
-        subprocess.run(['git', 'config', 'user.email', 'surabhi.h@qwerty.com'], cwd =repo_path ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', ''], cwd =repo_path, check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =repo_path ,check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd =repo_path, check=True, timeout=30)
         subprocess.run(['git', '-C', repo_path, 'add', 'meta-sheet.xlsx'], check=True)
         subprocess.run(['git', '-C', repo_path, 'commit', '-m',
                         f'Promote {promote_branch} from {lower_env} to {higher_env}'], check=True)
@@ -558,6 +558,15 @@ def main():
         # if not os.path.exists(target_folder_x):
         #     # os.makedirs(target_folder_x)
         print(target_folder_x)
+        
+        
+    github_token = os.getenv("GIT_TOKEN")
+    if github_token and "github.com" in repo_url:
+    # Inject token into repo URL (safe for HTTPS GitHub URLs)
+        if repo_url.startswith("https://"):
+            repo_url = repo_url.replace("https://", f"https://{github_token}@")
+        else:
+            raise ValueError("Unsupported repo_url format. Must start with https://")
  
     clone_repo(repo_url, promote_branch_x_1, target_folder_x_1)
  
@@ -609,8 +618,8 @@ def main():
         print(status_result.stdout)
         print(status_result.stderr)
         # Pull latest changes with rebase to avoid non-fast-forward errors
-        subprocess.run(['git', 'config', 'user.email', 'surabhi.h@qwerty.com'], cwd =target_folder_x ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', ''], cwd =target_folder_x, check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =target_folder_x ,check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd =target_folder_x, check=True, timeout=30)
         subprocess.run(['git', 'commit', '-m',
                     f'Config files generated: {sys.argv[2]} '], cwd =target_folder_x, check=True, capture_output=True, text=True)
         subprocess.run(['git', 'pull', '--rebase', 'origin', sys.argv[2]], cwd=target_folder_x, check=True, capture_output=True, text=True)

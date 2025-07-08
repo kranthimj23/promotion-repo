@@ -1,6 +1,9 @@
 import pandas as pd
 from openpyxl import load_workbook
- 
+import os
+import shutil
+import subprocess
+import sys
  
 def load_differences(file_path):
     """Load differences from an Excel file."""
@@ -172,9 +175,44 @@ def load_excel_sheets(file_path):
     """Load all sheets from an Excel file into a dictionary."""
     return pd.read_excel(file_path, sheet_name=None,header=0)
  
+def clone_repo(repo_url, branch_name, target_folder):
+    try:
+        if os.path.exists(target_folder):
+            shutil.rmtree(target_folder)
+        os.makedirs(target_folder)  # Create the target folder
+    except Exception as e:
+        print(f"Error creating folder '{target_folder}': {e}")
+        return
+    # Clone the specified branch into the target folder
+    try:
+        subprocess.run(
+            ["git", "clone", "--branch", branch_name, repo_url, target_folder],
+            check=True
+        )
+        print(f"Successfully cloned '{branch_name}' branch into '{target_folder}'.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error cloning the repository: {e}")
+ 
 def main():
-    differences_file = '/Users/m26395/Documents/promo-helm-charts/zdt-cicd-module/scripts/differences.xlsx'  # Update with your actual path
-    target_file = '/Users/m26395/Downloads/AWS_Infra_Environment (5) copy 14.xlsx'    # Specify path to existing target file
+ 
+    repo_url = sys.argv[1]  # input("Enter repo url")
+    # repo_name = input("")
+    src_repo = "https://github.com/kranthimj23/zdt-manager-src.git"
+    # promote_branch_x_1 = input("Enter the branch containing the stable release: ")
+    promote_branch_x = sys.argv[2]  # input("Enter the branch containing the updated files for release: ")
+    # lenv = sys.argv[3]  #  input("enter lower env name")
+    henv = sys.argv[3]  #  input("enter higher env name")
+    # target_folder_x_1 = os.path.join(os.getcwd(),"promo_x_1")
+    target_folder_x = os.path.join(os.getcwd(),"promo_x")
+    src_folder = os.path.join(os.getcwd(),"src")
+    clone_repo(src_repo, "zdt-application", src_folder)
+    clone_repo(repo_url, promote_branch_x, target_folder_x)
+ 
+    differences_file =  f'{target_folder_x}/helm-charts/{henv}-values/infra-values/release_note/infra_difference.xlsx'   # Update with your actual path
+    target_file = f'{target_folder_x}/helm-charts/{henv}-values/infra-values/dataset/infra_sheet.xlsx'
+    target_autotfvars =  f'{target_folder_x}/helm-charts/{henv}-values/infra-values/terraform.tfvars'
+    # subprocess.run()
+   # Specify path to existing target file
     # output_file = '/Users/m26395/Downloads/updatehigher-UAT1_drx.xlsx'  # Specify output path for new file
  
     # Load differences from Excel file
@@ -184,8 +222,47 @@ def main():
  
     updated_workbook = update_target_file(differences_df, target_file)
   
-    print(f"Updated target file saved to {target_file}")
+    print(f"Updated infra sheet saved to {target_file}")
+ 
+    result = subprocess.run(
+                        ["python3.11", f"{src_folder}/backend/infra/cd/scripts/generate_tfvars.py" , target_file ,target_autotfvars, f"{src_folder}/backend/infra/backend/infra/cd/tmpl" ],
+                        check=True,
+                        capture_output=True,
+                        text=True
+                    )
+    print(result.stdout)
+    print("auto.tfvars has been updated")
+ 
+ 
+    try:
+        subprocess.run(['git', 'add', "."], cwd =target_folder_x, check=True, capture_output=True, text=True)
+        status_result = subprocess.run(['git', 'status'], cwd =target_folder_x, check=True, capture_output=True, text=True)
+        print(status_result.stdout)
+        print(status_result.stderr)
+        # Pull latest changes with rebase to avoid non-fast-forward errors
+        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =target_folder_x ,check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd =target_folder_x, check=True, timeout=30)
+        subprocess.run(['git', 'commit', '-m',
+                    f'Pushing the updates into the branch: {promote_branch_x} {henv}  '], cwd =target_folder_x, check=True, capture_output=True, text=True)
+        # subprocess.run(['git', 'pull', '--rebase', 'origin', sys.argv[2]], cwd=target_folder_x, check=True, capture_output=True, text=True)
+        # print("Pulled latest changes successfully.")
+        # Push changes
+        push_result = subprocess.run(['git', 'push', 'origin', promote_branch_x], cwd=target_folder_x, check=True, capture_output=True, text=True)
+        print("Push successful:")
+        print(push_result.stdout)
+    except subprocess.CalledProcessError as e:
+        print("Git command failed!")
+        print("Return code:", e.returncode)
+        print("Command:", e.cmd)
+        print("Output:", e.output)
+        print("Error:", e.stderr)
+        sys.exit(1)
+ 
+ 
+ 
+ 
+ 
  
 if __name__ == "__main__":
     main()
-    
+ 

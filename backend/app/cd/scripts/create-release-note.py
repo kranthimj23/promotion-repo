@@ -60,7 +60,7 @@ def copy_missing_yaml_files(higher_env_x_1, lower_env_x, lower_env, higher_env):
                 file_content = file.read()  # Read the entire file into a string [1][2]
  
             # Replace the string
-            updated_content = file_content.replace(lower_env, higher_env)  # Replace occurrences of the old string with the new string [2][3][4]
+            updated_content = file_content.replace(lower_env, higher_env)  # Replace occurrences of the le_old string with the new string [2][3][4]
  
             with open(destination_path, 'w') as file:
                 file.write(updated_content)  # Write the updated content back to the file [2]
@@ -224,114 +224,89 @@ def yaml_to_json(folder_path):
  
     return json_data
  
-def compare_json_files(lower_env_x_1, lower_env_x, higher_env_x_1, higher_env_x, envs):
-    """
-    Compares lower_env x-1 vs x, and collects values for all columns as per new release note format.
-    """
+def compare_json_files(le_old_data, le_new_data, he_old_data):
     changes = []
-    all_services = set(lower_env_x_1.keys()) | set(lower_env_x.keys())
-    for service in all_services:
-        old = lower_env_x_1.get(service)
-        new = lower_env_x.get(service)
-        ho = higher_env_x_1.get(service, {})
-        hn = higher_env_x.get(service, {})
-        if old is None:
-            changes.append([service, 'add', '',json.dumps(new, indent=2), '', '', '', 'root object added'
-            ])
-        elif new is None:
-            changes.append([
-                service, 'delete', '',
-                '', json.dumps(old, indent=2), '', json.dumps(ho, indent=2), 'root object deleted'
-            ])
+ 
+    # Check for changes in the JSON files
+    for root in le_new_data.keys():
+        if root not in le_old_data:
+            changes.append((root, 'add', '', json.dumps(le_new_data[root], indent=4), '', '', '', 'root object added'))
         else:
-            compare(
-                old, new, ho, hn, service, '', changes, envs
-            )
+            compare(le_old_data[root], le_new_data[root], root, changes, he_old_data[root])
+ 
+    for root in le_old_data.keys():
+        if root not in le_new_data:
+            changes.append((root, 'delete', '', '',json.dumps(le_old_data[root], indent=4), '','', 'root object deleted'))
+ 
     return changes
  
-def compare(old, new, higher_old, higher_new, service, path, changes, envs):
-    if isinstance(old, dict) and isinstance(new, dict):
-        all_keys = set(old.keys()) | set(new.keys())
-        for k in all_keys:
-            new_path = f"{path}//{k}" if path else k
-            o = old.get(k)
-            n = new.get(k)
-            ho = higher_old.get(k) if isinstance(higher_old, dict) else None
-            hn = higher_new.get(k) if isinstance(higher_new, dict) else None
-            if o is not None and n is not None:
-                compare(o, n, ho, hn, service, new_path, changes, envs)
-            elif o is None:
-                changes.append([
-                    service, 'add', new_path,
-                    json.dumps(n, indent=2), '', '', '', 'Added'
-                ])
-            elif n is None:
-                changes.append([
-                    service, 'delete', new_path,
-                    '', json.dumps(o, indent=2), '', '', 'Deleted'
-                ])
-    elif isinstance(old, list) and isinstance(new, list):
-        if all(isinstance(i, dict) and "name" in i for i in old+new if i):
-            compare_list_of_dicts(
-                old, new,
-                higher_old if isinstance(higher_old, list) else [],
-                higher_new if isinstance(higher_new, list) else [],
-                service, path, changes, envs
-            )
-        else:
-            max_len = max(len(old), len(new))
-            for i in range(max_len):
-                o = old[i] if i < len(old) else None
-                n = new[i] if i < len(new) else None
-                ho = higher_old[i] if isinstance(higher_old, list) and i < len(higher_old) else None
-                hn = higher_new[i] if isinstance(higher_new, list) and i < len(higher_new) else None
-                idx_path = f"{path}//[{i}]"
-                if o is not None and n is not None:
-                    compare(o, n, ho, hn, service, idx_path, changes, envs)
-                elif o is None:
-                    changes.append([
-                        service, 'add', idx_path,
-                        json.dumps(n, indent=2), '', '', '', 'Added'
-                    ])
-                elif n is None:
-                    changes.append([
-                        service, 'delete', idx_path,
-                        '', json.dumps(o, indent=2), '', '', 'Deleted'
-                    ])
+def compare(le_old, le_new, root, changes, he_old, path=''):
+    # Handle dictionary structures
+    if isinstance(le_old, dict) and isinstance(le_new, dict):
+        for k in le_old.keys():
+            new_key_path = f"{path}//{k}" if path else k
+            if k in le_new:
+                compare(le_old[k], le_new[k], root, changes, he_old[k], new_key_path)
+            else:
+                changes.append((root, 'delete', new_key_path, '', json.dumps(le_old[k], indent=4), '', json.dumps(he_old[k], indent=4), 'Deleted'))
+ 
+        for k in le_new.keys():
+            new_key_path = f"{path}//{k}" if path else k
+            if k not in le_old:
+                changes.append((root, 'add', new_key_path, json.dumps(le_new[k], indent=4), json.dumps(le_old[k], indent=4),'','', 'Added'))
+ 
+    # Handle lists
+    elif isinstance(le_old, list) and isinstance(le_new, list):
+        if all(isinstance(i, dict) for i in le_old) and all(isinstance(i, dict) for i in le_new):
+            # Check if both lists are not empty
+            if le_old and le_new and "name" in le_old[0] and "name" in le_new[0]:
+                compare_list_of_dicts(le_old, le_new, root, changes, he_old, path)
+            else:
+                # Handle lists without "name" key or if lists are empty
+                for i, le_old_item in enumerate(le_old):
+                    if i < len(le_new):
+                        if le_old_item != le_new[i]:
+                            changes.append((root, 'modify', f"{path}", "["+json.dumps(le_new[i], indent=4)+"]", "["+json.dumps(le_old_item, indent=4)+"]",'',"["+json.dumps(he_old[i], indent=4)+"]",'Modified'))
+                    else:
+                        changes.append((root, 'delete', f"{path}", '',json.dumps(le_old_item, indent=4), '',json.dumps(he_old[i], indent=4),'Deleted'))
+ 
+ 
+                # Add any new elements from the new list
+                for i in range(len(le_old), len(le_new)):
+                    changes.append((root, 'add', f"{path}", json.dumps(le_new[i], indent=4), '','','', 'Added'))
+ 
+    # Compare scalar values
     else:
-        if old != new:
-            # As per your request, higher env values are always empty for now
-            changes.append([
-                service, 'modify', path,
-                json.dumps(new, indent=2), json.dumps(old, indent=2), '', '', 'Modified'
-            ])
+        if le_old != le_new:
+            changes.append((root, 'modify', path, json.dumps(le_new, indent=4), json.dumps(le_old, indent=4) ,'',json.dumps(he_old, indent=4) ,'Modified'))
  
-def compare_list_of_dicts(old_list, new_list, higher_old_list, higher_new_list, service, path, changes, envs):
-    old_dict = {item["name"]: item for item in old_list if isinstance(item, dict) and "name" in item}
-    new_dict = {item["name"]: item for item in new_list if isinstance(item, dict) and "name" in item}
-    ho_dict = {item["name"]: item for item in higher_old_list if isinstance(item, dict) and "name" in item}
-    hn_dict = {item["name"]: item for item in higher_new_list if isinstance(item, dict) and "name" in item}
-    all_names = set(old_dict.keys()) | set(new_dict.keys())
-    for name in all_names:
-        o = old_dict.get(name)
-        n = new_dict.get(name)
-        ho = ho_dict.get(name)
-        hn = hn_dict.get(name)
-        name_path = f"{path}//name={name}" if path else f"name={name}"
-        if o is not None and n is not None:
-            compare(o, n, ho, hn, service, name_path, changes, envs)
-        elif o is None:
-            changes.append([
-                service, 'add', name_path,
-                json.dumps(n, indent=2), '', '', '', 'Added'
-            ])
-        elif n is None:
-            changes.append([
-                service, 'delete', name_path,
-                '', json.dumps(o, indent=2), '', '', 'Deleted'
-            ])
+def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, path=''):
+    # Compare lists of dictionaries based on the "name" key
+    le_old_dict = {item["name"]: item for item in le_old_list if "name" in item}
+    le_new_dict = {item["name"]: item for item in le_new_list if "name" in item}
+    he_old_dict = {item["name"]: item for item in he_old_list if "name" in item}
  
-def write_changes_to_excel(changes, release_note_path, envs, env_list=None):
+ 
+    # Compare le_old dictionaries with new
+    for key, le_old_item in le_old_dict.items():
+        if key in le_new_dict:
+            le_new_item = le_new_dict[key]
+            he_old_item = he_old_dict[key]
+            # If there are changes in the item
+            if le_old_item != le_new_item:
+                changes.append((root, 'modify', path, json.dumps(le_new_item, indent=4), json.dumps(le_old_item, indent=4),'',json.dumps(he_old_item, indent=4), 'Modified'))
+ 
+        else:
+            changes.append((root, 'delete', path, '' , json.dumps(le_old_item, indent=4),'',json.dumps(he_old_item, indent=4),'Deleted'))
+ 
+ 
+    # Check for additions
+    for key, new_item in le_new_dict.items():
+        if key not in le_old_dict:
+            changes.append((root, 'add', path, json.dumps(new_item, indent=4),'','','','Added'))
+ 
+ 
+def write_changes_to_excel(changes, release_note_path, envs,env_list):
     if not changes:
         print("No differences found; skipping the creation of release note.")
         return
@@ -346,58 +321,42 @@ def write_changes_to_excel(changes, release_note_path, envs, env_list=None):
     excel_file = f"{base_filename}-{date_time_str}.xlsx"
     excel_file_path = os.path.join(release_note_path, excel_file)
  
-    # Always create a new workbook for the release note
-    wb = Workbook()
+    # Check if the file exists
+    if os.path.exists(excel_file_path):
+        wb = load_workbook(excel_file_path)
+    else:
+        wb = Workbook()
+ 
     ws = wb.active
-    ws.title = envs[1]  # Sheet name as higher env
+    ws.title = envs[1]  # Name the first sheet
  
-    # New columns as per requirement
-    columns = [
-        'Service name', 'Change Request', 'Key',
-        f'{envs[0]}-current value', f'{envs[0]}-previous value',
-        f'{envs[1]}-current value', f'{envs[1]}-previous value',
-        'Comment'
-    ]
-    ws.append(columns)
+    ws.append([
+        'Service name', 'Change Request', 'Key', f'{envs[0]}-current value', f'{envs[0]}-previous value', f'{envs[1]}-current value', f'{envs[1]}-previous value','Comment'])
  
+    # Write the changes for the environment
     for change in changes:
-        # change: [service, change_type, key, l_cur, l_prev, h_cur, h_prev, comment]
-        # h_cur and h_prev are always empty per your instruction
- 
-        service, change_type, key, l_cur, l_prev, h_cur, h_prev, comment = change
+        print(change)
+        service_name, change_type, key, le_cur, le_prev, he_cur, he_prev, comment = change
  
         # Check if value exceeds 32,767 characters
-        if len(l_cur) > 32767:
+        if len(le_cur) > 32767:
             # Save large data to a text file
-            txt_file_name = f"{service}.txt"
+            txt_file_name = f"{service_name}.txt"
             txt_file_path = os.path.join(release_note_path, txt_file_name)
             with open(txt_file_path, 'w') as txt_file:
-                txt_file.write(l_cur)
+                txt_file.write(le_cur)
  
             # Format path for hyperlink (absolute path)
             txt_file_path_linked = f'file:///{os.path.abspath(txt_file_path)}'.replace(' ', '%20')
  
             # Create a hyperlink in Excel pointing to this text file
-            ws.append([service,change_type,key,f'=HYPERLINK("{txt_file_path_linked}")',l_prev, h_cur, h_prev, comment])
+            ws.append([service_name,change_type,key,f'=HYPERLINK("{txt_file_path_linked}")','','','',comment])
         else:
             # Append new changes directly to the relevant sheet
-            row = [
-            change[0], change[1], change[2],
-            change[3], change[4], '', change[6], change[7]
-        ]
-        ws.append(row)
+            ws.append([service_name, change_type, key, le_cur, le_prev, he_cur, he_prev, comment])
  
- 
- 
- 
- 
- 
- 
- 
- 
+    # Save the updated workbook
     wb.save(excel_file_path)
-    print(f"Release note written to {excel_file_path}")
- 
  
 def get_input(prompt):
     attempts = 3
@@ -490,10 +449,9 @@ def compare_shell_scripts(folder_x_1, folder_x, release_note_path, env):
     else:
         print(f"No modified scripts found in {scripts_folder_x_1}.")
  
- 
 def execute(target_folder_x, lower_env, higher_env, repo_url):
     try:
-        release_note_path = os.path.join(target_folder_x, "release_note")
+        release_note_path = os.path.join(target_folder_x, "helm-charts", "{higher_env}-values", "release_note")
         if os.path.exists(release_note_path) and os.path.isdir(release_note_path):
             print(f"Checking folder: {release_note_path}")
  
@@ -519,8 +477,7 @@ def execute(target_folder_x, lower_env, higher_env, repo_url):
         print("STDOUT:", e.stdout)
         print("STDERR:", e.stderr)
  
- 
-def create_upgrade_services_txt(excel_path, sheet_name, repo_root, envs):
+def create_upgrade_services_txt(excel_path, sheet_name, repo_root):
     # Path to the output file in the root of the repo
     txt_path = os.path.join(repo_root, 'upgrade-services.txt')
  
@@ -541,7 +498,7 @@ def create_upgrade_services_txt(excel_path, sheet_name, repo_root, envs):
     try:
         key_col = headers.index('Key') + 1
         service_name_col = headers.index('Service name') + 1
-        value_col = headers.index(f'{envs[0]}-current value') + 1
+        value_col = headers.index(f'{sheet_name}-current value') + 1
     except ValueError as e:
         raise ValueError(f"Required column missing: {e}")
  
@@ -575,6 +532,14 @@ def main():
     env_list = ['dev2', 'sit2', 'uat2', 'prod']
     # Environment list (you can modify based on your use case)
     # envs = ['dev', 'sit', 'uat', 'preprod', 'perf', 'mig/dm', 'sec', 'prod']
+    
+    github_token = os.getenv("GIT_TOKEN")
+    if github_token and "github.com" in repo_url:
+    # Inject token into repo URL (safe for HTTPS GitHub URLs)
+        if repo_url.startswith("https://"):
+            repo_url = repo_url.replace("https://", f"https://{github_token}@")
+        else:
+            raise ValueError("Unsupported repo_url format. Must start with https://")
  
     # To Clone the repo from promotion-x-1 branch
     clone_repo(repo_url, promote_branch_x_1, target_folder_x_1)
@@ -583,151 +548,93 @@ def main():
  
     clone_repo(repo_url, promote_branch_x, target_folder_x)
  
-    if envs[0].startswith('dev'):
-        print("dev2 is the lower-env")
-        #to create the release note folder
-        release_note_path = os.path.join(target_folder_x, "helm-charts", f"{envs[1]}-values", f"release_note")
-        if os.path.exists(release_note_path) and os.path.isdir(release_note_path):
-            print(f"Checking folder: {release_note_path}")
+    # if envs[0].startswith('dev'):
+    print("dev2 is the lower-env")
+    #to create the release note folder
+    release_note_path = os.path.join(target_folder_x, "helm-charts", f"{envs[1]}-values", f"release_note")
+    if os.path.exists(release_note_path) and os.path.isdir(release_note_path):
+        print(f"Checking folder: {release_note_path}")
  
-            # List all files in the directory
-            for filename in os.listdir(release_note_path):
-                # Check if the file ends with .xlsx
-                if filename.endswith('.xlsx'):
-                    file_path = os.path.join(release_note_path, filename)
-                    try:
-                        os.remove(file_path)  # Delete the file
-                        print(f"Deleted: {file_path}")
-                    except Exception as e:
-                        print(f"Error deleting file {file_path}: {e}")
-        else:
-            print(f"Folder does not exist: {release_note_path}, hence creating one")
-        if not os.path.exists(release_note_path):
-            os.makedirs(release_note_path)
- 
-        higher_env_x_1 = os.path.join(target_folder_x_1, f"helm-charts/{envs[1]}-values/app-values")
-        lower_env_x = os.path.join(target_folder_x, f"helm-charts/{envs[0]}-values/app-values")
- 
-        if os.path.exists(higher_env_x_1) and os.path.exists(lower_env_x):
-            copy_missing_yaml_files(higher_env_x_1, lower_env_x, envs[0], envs[1])
- 
-        #To fetch the path of config-dev.json from promotion-x-1 branch
-        previous_json_path = fetch_json(target_folder_x_1, envs[0])
-        print(previous_json_path)
- 
-        #To fetch the path of config-dev.json from promotion-x branch
-        new_json_path = fetch_json(target_folder_x, envs[0])
-        print(new_json_path)
- 
-        # Load previous JSON data
-        try:
-            with open(previous_json_path, 'r') as old_file:
-                old_data = json.load(old_file)
-        except (json.JSONDecodeError, FileNotFoundError):
-            print("Previous JSON file is invalid or not found.")
-            old_data = {}
- 
-        lower_env_path_x_1 = os.path.dirname(previous_json_path)
-        old_data = yaml_to_json(lower_env_path_x_1)
- 
-        # Save the previous JSON data
-        with open(previous_json_path, 'w') as previous_json_file:
-            json.dump(old_data, previous_json_file, indent=4)
- 
-        lower_env_path_x = os.path.dirname(new_json_path)
-        json_data = yaml_to_json(lower_env_path_x)
- 
-        # Save the new JSON data
-        with open(new_json_path, 'w') as new_json_file:
-            json.dump(json_data, new_json_file, indent=4)
- 
-        # --- NEW: Load higher env data for both x-1 and x ---
-        higher_env_x_1_path = os.path.join(target_folder_x_1, f"helm-charts/{envs[1]}-values/app-values")
-        higher_env_x_path = os.path.join(target_folder_x, f"helm-charts/{envs[1]}-values/app-values")
-        higher_env_x_1 = yaml_to_json(higher_env_x_1_path)
-        higher_env_x = yaml_to_json(higher_env_x_path)
- 
-        # --- UPDATED: Compare JSON files with all required arguments ---
-        changes = compare_json_files(
-            old_data,           # lower_env_x_1
-            json_data,          # lower_env_x
-            higher_env_x_1,     # higher_env_x_1
-            higher_env_x,       # higher_env_x
-            envs                # envs
-        )
- 
-        # Write changes to Excel with multiple sheets
-        write_changes_to_excel(changes, release_note_path, envs, env_list)
- 
-        result = execute(target_folder_x, envs[0], envs[1], repo_url)
-        print(result)
- 
-        create_upgrade_services_txt(release_note_path, envs[1], target_folder_x, envs)
- 
+        # List all files in the directory
+        for filename in os.listdir(release_note_path):
+            # Check if the file ends with .xlsx
+            if filename.endswith('.xlsx'):
+                file_path = os.path.join(release_note_path, filename)
+                try:
+                    os.remove(file_path)  # Delete the file
+                    print(f"Deleted: {file_path}")
+                except Exception as e:
+                    print(f"Error deleting file {file_path}: {e}")
     else:
-        print("dev2 is not the lower-env")
-        release_note_path = os.path.join(target_folder_x, "helm-charts", f"{envs[1]}-values", f"release_note")
-        if os.path.exists(release_note_path) and os.path.isdir(release_note_path):
-            print(f"Checking folder: {release_note_path}")
+        print(f"Folder does not exist: {release_note_path}, hence creating one")
+    if not os.path.exists(release_note_path):
+        os.makedirs(release_note_path)
  
-            # List all files in the directory
-            for filename in os.listdir(release_note_path):
-                # Check if the file ends with .xlsx
-                if filename.endswith('.xlsx'):
-                    excel_file = os.path.join(release_note_path, filename)
-                    break
+    higher_env_x_1 = os.path.join(target_folder_x_1, f"helm-charts/{envs[1]}-values/app-values")
+    lower_env_x = os.path.join(target_folder_x, f"helm-charts/{envs[0]}-values/app-values")
+ 
+    if os.path.exists(higher_env_x_1) and os.path.exists(lower_env_x):
+        copy_missing_yaml_files(higher_env_x_1, lower_env_x, envs[0], envs[1])
+ 
+    #To fetch the path of config-dev.json from promotion-x-1 branch
+    le_previous_json_path = fetch_json(target_folder_x_1, envs[0])
+    print(le_previous_json_path)
+ 
+    #To fetch the path of config-dev.json from promotion-x branch
+    le_new_json_path = fetch_json(target_folder_x, envs[0])
+    print(le_new_json_path)
+ 
+    # Load previous JSON data
+    try:
+        with open(le_previous_json_path, 'r') as le_old_file:
+            le_old_data = json.load(le_old_file)
+    except (json.JSONDecodeError, FileNotFoundError):
+        print("Previous JSON file is invalid or not found.")
+        le_old_data = {}
+    print(os.path.dirname(le_previous_json_path))
+    lower_env_path = os.path.dirname(le_previous_json_path)
+    le_old_data = yaml_to_json(lower_env_path)
+ 
+    # Save the previous JSON data
+    with open(le_previous_json_path, 'w') as previous_json_file:
+        json.dump(le_old_data, previous_json_file, indent=4)
+ 
+    lower_env_path = os.path.dirname(le_new_json_path)
+    le_json_data = yaml_to_json(lower_env_path)
+ 
+    # Save the new JSON data
+    with open(le_new_json_path, 'w') as le_new_json_file:
+        json.dump(le_json_data, le_new_json_file, indent=4)
  
  
-        if not excel_file:
-            print(f"No Excel release note file found in {release_note_path}.")
-            return
+    he_previous_json_path = fetch_json(target_folder_x_1, envs[1])
+    print(he_previous_json_path)
  
-        wb = openpyxl.load_workbook(excel_file)
-        if envs[0] not in wb.sheetnames:
-            print(f"Sheet '{envs[0]}' not found in the Excel file.")
-            return
+    higher_env_path = os.path.dirname(he_previous_json_path)
+    he_old_data = yaml_to_json(higher_env_path)
  
-        sheet = wb[envs[0]]
+            # Save the previous JSON data
+    with open(he_previous_json_path, 'w') as he_previous_json_path:
+        json.dump(he_old_data, he_previous_json_path, indent=4)
  
-        # Check column D (4th column) for any filled cells from row 2 onwards
-        values_present = False
-        for row in sheet.iter_rows(min_row=2, min_col=4, max_col=4):
-            cell = row[0]
-            if cell.value not in (None, '', ' '):
-                values_present = True
-            else:
-                print("771")
  
-        if values_present:
-            print(f"Values are already available in column D of sheet '{envs[0]}'. No release note creation required.")
-        else:
-            # Optionally handle the case where column D is empty
-            print(f"No values found in column D of sheet '{envs[0]}'. Proceeding as needed.")
-            # You can decide to run the usual process or handle differently
-        result = execute()
-        print(result)
+    # Compare JSON files
+    changes = compare_json_files(le_old_data, le_json_data, he_old_data)
+        # Write changes to Excel with multiple sheets
+    write_changes_to_excel(changes, release_note_path, envs, env_list)
  
-        create_upgrade_services_txt(release_note_path, envs[1], target_folder_x, envs)
+    result = execute(target_folder_x, envs[0],envs[1], repo_url)
+    print(result)
  
-    root_folders = os.listdir(target_folder_x)
- 
-    print(f"Contents of folder '{target_folder_x}':")
-    for folder in root_folders:
-        if folder == "release_note":
-            release_note_folder = os.path.join(target_folder_x,folder)
-            for i in folder:
-                if i.endswith('xlsx'):
-                    release_note = os.path.join(release_note_folder,i)
-                    print("file exists: ", release_note)
- 
+    create_upgrade_services_txt(release_note_path, envs[1], target_folder_x)
     try:
         subprocess.run(['git', 'add', "."], cwd =target_folder_x, check=True, capture_output=True, text=True)
         status_result = subprocess.run(['git', 'status'], cwd =target_folder_x, check=True, capture_output=True, text=True)
         print(status_result.stdout)
         print(status_result.stderr)
         # Pull latest changes with rebase to avoid non-fast-forward errors
-        subprocess.run(['git', 'config', 'user.email', 'surabhi.h@qwerty.com'], cwd =target_folder_x ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', ''], cwd =target_folder_x, check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =target_folder_x ,check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd =target_folder_x, check=True, timeout=30)
         subprocess.run(['git', 'commit', '-m',
                     f'Pushing the release_note into the branch: {sys.argv[2]} '], cwd =target_folder_x, check=True, capture_output=True, text=True)
         subprocess.run(['git', 'pull', '--rebase', 'origin', sys.argv[2]], cwd=target_folder_x, check=True, capture_output=True, text=True)
@@ -751,5 +658,4 @@ def main():
  
 if __name__ == '__main__':
     main()
- 
  

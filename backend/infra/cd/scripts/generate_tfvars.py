@@ -3,12 +3,31 @@ import re
 import json
 import pandas as pd
 import hcl2
+import subprocess
+import shutil
+import sys
  
 # Constants
 # TEMPLATE_FOLDER = r'/Users/m26395/Downloads/promo-helm-charts/zdt-infrastructure/templates' # Folder containing all template files
-TEMPLATE_FOLDER=r'C:\Users\MS LAKSHMI\Documents\DevSecOps\src\zdt-manager-src\backend\infra\cd\tmpl'
-INPUT_EXCEL = r'C:\Users\MS LAKSHMI\Documents\DevSecOps\devops-lab-gke\dataset\infra_sheet.xlsx'  # The input Excel file
-OUTPUT_FILE = r'C:\Users\MS LAKSHMI\Documents\DevSecOps\devops-lab-gke\terraform.tfvars'      # Output file
+ 
+def clone_repo(repo_url, branch_name, target_folder):
+    try:
+        if os.path.exists(target_folder):
+            shutil.rmtree(target_folder)
+        os.makedirs(target_folder)  # Create the target folder
+    except Exception as e:
+        print(f"Error creating folder '{target_folder}': {e}")
+        return
+    # Clone the specified branch into the target folder
+    try:
+        subprocess.run(
+            ["git", "clone", "--branch", branch_name, repo_url, target_folder],
+            check=True
+        )
+        print(f"Successfully cloned '{branch_name}' branch into '{target_folder}'.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error cloning the repository: {e}")
+     # Output file
  
 # Function to load templates dynamically
 def load_templates(template_folder):
@@ -50,7 +69,7 @@ def replace_placeholders(template, data):
         elif value is None:
             value = ""  # Replace None with an empty string
         elif value == "not-applicable":
-            template = re.sub(rf".*{placeholder}.*\n?", " ", template)
+            template = re.sub(rf".*{placeholder}.*\n?", "", template)
         #Replace the placeholder in the template                    
         template = template.replace(placeholder, str(value))
     print(template)
@@ -285,6 +304,12 @@ def generate_tfvars(data, templates):
  
 # Main function
 def main():
+ 
+ 
+    INPUT_EXCEL = sys.argv[1] # input("input xl") # The input Excel file
+    OUTPUT_FILE =  sys.argv[2] # input("outpu tfvars path")
+ 
+    TEMPLATE_FOLDER =  sys.argv[3] # input("template folder")
     # Ensure the template folder exists
     if not os.path.exists(TEMPLATE_FOLDER):
         raise FileNotFoundError(f"The template folder '{TEMPLATE_FOLDER}' does not exist.")
@@ -314,6 +339,7 @@ def main():
         print(f"Syntax error: {e}")
  
     print(f"Successfully generated '{OUTPUT_FILE}'.")
+ 
  
 # Entry point
 if __name__ == "__main__":

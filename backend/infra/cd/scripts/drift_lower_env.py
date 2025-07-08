@@ -1,4 +1,8 @@
 import pandas as pd
+import subprocess
+import os
+import shutil
+import sys
  
 def load_excel_sheets(file_path):
     """Load all sheets from an Excel file into a dictionary."""
@@ -50,7 +54,7 @@ def create_whole_resource_diff(df, sheet_name, change_type):
     return differences
  
  
-def compare_dataframes(df1, df2, df3, sheet_name):
+def compare_dataframes(df1, df2, df3, sheet_name,henv,lenv):
     """Compare two DataFrames and return differences."""
     differences = []
  
@@ -125,10 +129,10 @@ def compare_dataframes(df1, df2, df3, sheet_name):
                     'Object Id': object_id,   # Adding 2 to account for header and zero-based index
                     'Field': col,  # Column name as Field
                     # 'Field Row': index + 2,
-                    'DEV Previous Value': val1 if val1 is not None else "",
-                    'DEV Current Value': val2 if val2 is not None else "",
-                    'SIT Current Value': val3 if val3 is not None else "",
-                    'SIT Value': None,  # Placeholder for DR Value
+                    f'{lenv} Previous Value': val1 if val1 is not None else "",
+                    f'{lenv} Current Value': val2 if val2 is not None else "",
+                    f'{henv} Current Value': val3 if val3 is not None else "",
+                    f'{henv} Value': None,  # Placeholder for DR Value
                     'Change': 'Modified'
                 })
             elif val1 is not None and val2 is None:
@@ -137,10 +141,10 @@ def compare_dataframes(df1, df2, df3, sheet_name):
                 'Object Id': object_id,   # Adding 2 to account for header and zero-based index
                 'Field': col,  # Column name as Field
                 # 'Field Row': index + 2,  # Adding 2 to account for header and zero-based index
-                'DEV Previous Value': val1,
-                'DEV Current Value': "",
-                'SIT Current Value': val3 if val3 is not None else "",
-                'SIT Value': None,  # Placeholder for DR Value
+                f'{lenv} Previous Value': val1,
+                f'{lenv} Current Value': "",
+                f'{henv} Current Value': val3 if val3 is not None else "",
+                f'{henv} Value': None,  # Placeholder for DR Value
                 'Change': 'Deleted'
             })
             elif val1 is None and val2 is not None:
@@ -149,10 +153,10 @@ def compare_dataframes(df1, df2, df3, sheet_name):
                 'Object Id': object_id,   # Adding 2 to account for header and zero-based index
                 'Field': col,  # Column name as Field
                 # 'Field Row': index + 2,  # Adding 2 to account for header and zero-based index
-                'DEV Previous Value': "",
-                'DEV Current Value': val2,
-                'SIT Current Value': "",
-                'SIT Value': None,  # Placeholder for DR Value
+                f'{lenv} Previous Value': "",
+                f'{lenv} Current Value': val2,
+                f'{henv} Current Value': "",
+                f'{henv} Value': None,  # Placeholder for DR Value
                 'Change': 'Added'
             })
     return differences
@@ -173,11 +177,69 @@ def save_to_excel(differences, scaled_resources, output_file):
     with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
         df.to_excel(writer, sheet_name="differences", index=False)
         dff.to_excel(writer, sheet_name="scaled_resources", index=False)
+ 
+def clone_repo(repo_url, branch_name, target_folder):
+    try:
+        if os.path.exists(target_folder):
+            shutil.rmtree(target_folder)
+        os.makedirs(target_folder)  # Create the target folder
+    except Exception as e:
+        print(f"Error creating folder '{target_folder}': {e}")
+        return
+    # Clone the specified branch into the target folder
+    try:
+        subprocess.run(
+            ["git", "clone", "--branch", branch_name, repo_url, target_folder],
+            check=True
+        )
+        print(f"Successfully cloned '{branch_name}' branch into '{target_folder}'.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error cloning the repository: {e}")
+ 
+ 
+def copy_contents(src_folder, dst_folder):
+    if not os.path.exists(dst_folder):
+        os.makedirs(dst_folder)
+    for item in os.listdir(src_folder):
+        s = os.path.join(src_folder, item)
+        d = os.path.join(dst_folder, item)
+        if os.path.isdir(s):
+            shutil.copytree(s, d, dirs_exist_ok=True)  # Python 3.8+
+        else:
+            shutil.copy2(s, d)
+    
+   
+ 
 def main():
-    input_excel_1 = '/Users/m26395/Downloads/AWS_Infra_Environment (5).xlsx'
-    input_excel_2 = '/Users/m26395/Downloads/AWS_Infra_Envi_X_state - Copy 1 (1).xlsx'
-    input_excel_3 = '/Users/m26395/Downloads/AWS_Infra_Environment (5).xlsx'  
-    output_file = '/Users/m26395/Documents/promo-helm-charts/zdt-cicd-module/scripts/differences.xlsx'  # Specify output path
+ 
+    repo_url =  sys.argv[1]  # input("Enter repo url")  # repo url for sys argument 1
+    # repo_name = input("")
+    promote_branch_x_1 =  sys.argv[2]  #input("Enter the branch containing the stable release: ")   # repo branch x - 1  for sys argument 2
+    promote_branch_x =  sys.argv[3]  # input("Enter the branch containing the updated files for release: ") # repo branch x   for sys argument 3
+    lenv =  sys.argv[4]  # input("enter lower env name") # repo lower env for sys argument 4
+    henv =  sys.argv[5]  # input("enter higher env name") # repo higher env for sys argument 5
+    target_folder_x_1 = os.path.join(os.getcwd(),"promo_x_1")
+    target_folder_x = os.path.join(os.getcwd(),"promo_x")
+ 
+     # To Clone the repo from promotion-x-1 branch
+    clone_repo(repo_url, promote_branch_x_1, target_folder_x_1)
+    # To Clone the repo from promotion-x branch
+    clone_repo(repo_url, promote_branch_x, target_folder_x)
+ 
+ 
+    input_excel_1 = f'{target_folder_x_1}/helm-charts/{lenv}-values/infra-values/dataset/infra_sheet.xlsx'
+    input_excel_2 = f'{target_folder_x}/helm-charts/{lenv}-values/infra-values/dataset/infra_sheet.xlsx'
+    input_excel_3 = f'{target_folder_x_1}/helm-charts/{henv}-values/infra-values/dataset/infra_sheet.xlsx'
+ 
+    x_1infra_folder =  f'{target_folder_x_1}/helm-charts/{henv}-values/infra-values/'
+    x_infra_folder = f'{target_folder_x}/helm-charts/{henv}-values/infra-values/'
+ 
+    copy_contents(x_1infra_folder, x_infra_folder)
+    print(f"Copied contents from {x_1infra_folder} to {x_infra_folder}")
+ 
+ 
+ 
+    output_file = f'{target_folder_x}/helm-charts/{henv}-values/infra-values/release_note/infra_difference.xlsx'  # Specify output path
  
     # Load all sheets from both Excel files
     sheets_1 = load_excel_sheets(input_excel_1)
@@ -200,7 +262,7 @@ def main():
             df3 = sheets_3[sheet_name]
             
             # Compare the two DataFrames and gather differences
-            diff = compare_dataframes(df1, df2,df3, sheet_name)
+            diff = compare_dataframes(df1, df2,df3, sheet_name,henv,lenv)
             sr = create_scaled_resources(df1,df3,sheet_name)
             scaled_resources.extend(sr)
             differences.extend(diff)
@@ -221,6 +283,32 @@ def main():
     # Save the differences to an Excel file
     save_to_excel(differences,scaled_resources , output_file,)
     print(f"Differences saved to {output_file}")
+ 
+ 
+    ##commit and push x folder
+    try:
+        subprocess.run(['git', 'add', "."], cwd =target_folder_x, check=True, capture_output=True, text=True)
+        status_result = subprocess.run(['git', 'status'], cwd =target_folder_x, check=True, capture_output=True, text=True)
+        print(status_result.stdout)
+        print(status_result.stderr)
+        # Pull latest changes with rebase to avoid non-fast-forward errors
+        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =target_folder_x ,check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd =target_folder_x, check=True, timeout=30)
+        subprocess.run(['git', 'commit', '-m',
+                    f'Pushing the release_note into the branch: {promote_branch_x} {henv}  '], cwd =target_folder_x, check=True, capture_output=True, text=True)
+        # subprocess.run(['git', 'pull', '--rebase', 'origin', sys.argv[2]], cwd=target_folder_x, check=True, capture_output=True, text=True)
+        # print("Pulled latest changes successfully.")
+        # Push changes
+        push_result = subprocess.run(['git', 'push', 'origin', promote_branch_x], cwd=target_folder_x, check=True, capture_output=True, text=True)
+        print("Push successful:")
+        print(push_result.stdout)
+    except subprocess.CalledProcessError as e:
+        print("Git command failed!")
+        print("Return code:", e.returncode)
+        print("Command:", e.cmd)
+        print("Output:", e.output)
+        print("Error:", e.stderr)
+        sys.exit(1)
  
 if __name__ == "__main__":
     main()
