@@ -17,7 +17,7 @@ pipeline {
                         branches: [[name: "*/main"]],
                         userRemoteConfigs: [[
                             url: "${env.github_url}",
-                            credentialsId: GIT_CREDENTIALS_ID
+                            credentialsId: env.GIT_CREDENTIALS_ID
                         ]]
                         ])
                     }
