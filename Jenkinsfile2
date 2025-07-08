@@ -5,7 +5,7 @@
 
 pipeline {
 
-    agent // add the label
+    agent any // add the label
  
     environment {
         GIT_CREDENTIALS_ID = '' //add the jenkins credentials
