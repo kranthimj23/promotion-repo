@@ -23,8 +23,13 @@ infra_raw_list = os.getenv('infra-repo-list', '')
 infra_repo_list = [item.strip() for item in infra_raw_list.split('\n') if item.strip()]
 print("Parsed list:", infra_repo_list)
  
+<<<<<<< HEAD
 promotion_repo = sys.argv[1]
 target_branch = sys.argv[2]
+=======
+promotion_repo = "https://github.hdfcbank.com/HDFCBANK/promo-helm-charts.git"
+target_branch = sys.argv[1]
+>>>>>>> 145d037b1c0d252d22f061b38f6d11164719cec7
 temp_dir = tempfile.mkdtemp()
 
 github_token = os.getenv("GIT_TOKEN")
@@ -35,7 +40,11 @@ if github_token and "github.com" in promotion_repo:
     else:
         raise ValueError("Unsupported repo_url format. Must start with https://")
  
+<<<<<<< HEAD
 source_app_relative_path = os.path.join("helm-charts", "dev-values")
+=======
+source_app_relative_path = os.path.join("helm-charts", "dev-values", "app-values")
+>>>>>>> 145d037b1c0d252d22f061b38f6d11164719cec7
 source_aql_relative_path = os.path.join("AQL", "scripts")
 # source_sql_relative_path = os.path.join("SQL", "scripts")
 # source_infra_relative_path = os.path.join("Infra")
@@ -95,12 +104,15 @@ def main():
     # ------------------ APP REPOS ------------------ #
     for repo in app_repo_list:
         try:
+<<<<<<< HEAD
             if github_token and "github.com" in repo:
                 # Inject token into repo URL (safe for HTTPS GitHub URLs)
                 if repo.startswith("https://"):
                     repo = repo.replace("https://", f"https://{github_token}@")
                 else:
                     raise ValueError("Unsupported repo_url format. Must start with https://")
+=======
+>>>>>>> 145d037b1c0d252d22f061b38f6d11164719cec7
             app_temp_dir = tempfile.mkdtemp()
             if os.path.exists(app_temp_dir):
                 shutil.rmtree(app_temp_dir)
@@ -123,12 +135,15 @@ def main():
     # ------------------ AQL REPOS ------------------ #
     for repo in aql_db_repo_list:
         try:
+<<<<<<< HEAD
             if github_token and "github.com" in repo:
                 # Inject token into repo URL (safe for HTTPS GitHub URLs)
                 if repo.startswith("https://"):
                     repo = repo.replace("https://", f"https://{github_token}@")
                 else:
                     raise ValueError("Unsupported repo_url format. Must start with https://")
+=======
+>>>>>>> 145d037b1c0d252d22f061b38f6d11164719cec7
             aql_temp_dir = tempfile.mkdtemp()
             if os.path.exists(aql_temp_dir):
                 shutil.rmtree(aql_temp_dir)
@@ -171,6 +186,7 @@ def main():
     # ------------------ INFRA REPOS ------------------ #
     for repo in infra_repo_list:
         try:
+<<<<<<< HEAD
             if github_token and "github.com" in repo:
                 # Inject token into repo URL (safe for HTTPS GitHub URLs)
                 if repo.startswith("https://"):
@@ -178,6 +194,8 @@ def main():
                 else:
                     raise ValueError("Unsupported repo_url format. Must start with https://")
 
+=======
+>>>>>>> 145d037b1c0d252d22f061b38f6d11164719cec7
             infra_temp_dir = tempfile.mkdtemp()
             if os.path.exists(infra_temp_dir):
                 shutil.rmtree(infra_temp_dir)
@@ -260,8 +278,13 @@ def main():
             print(f"Infra directory copied from: {infra_dir}")
  
         # Commit and push changes
+<<<<<<< HEAD
         subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd=promo_repo_path, check=True, timeout=30)
         subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd=promo_repo_path, check=True, timeout=30)
+=======
+        subprocess.run(['git', 'config', 'user.email', 'surabhi.h@hdfcbank.com'], cwd=promo_repo_path, check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.name', 'MGXR3734'], cwd=promo_repo_path, check=True, timeout=30)
+>>>>>>> 145d037b1c0d252d22f061b38f6d11164719cec7
         run_git_command("git add .", cwd=promo_repo_path)
         run_git_command(f'git commit -m "Sync dev-values from all services"', cwd=promo_repo_path)
         run_git_command(f'git push origin {target_branch}', cwd=promo_repo_path)
