@@ -390,7 +390,7 @@ def apply_sed_to_yaml(folder_path):
     for file_name in os.listdir(folder_path):
         if file_name.endswith(".yaml"):
             file_path = os.path.join(folder_path, file_name)
-            sed_command = f"sed -i '' -E -e 's/([[:space:]]+value:[[:space:]]*)(0[0-9]+)([[:space:]]*$)/\\1\"\\2\"\\3/' -e 's/([[:space:]]+value:[[:space:]]*)([A-Z])([[:space:]]*$)/\\1\"\\2\"\\3/' {file_path}"
+            sed_command = f"sed -i -E -e 's/([[:space:]]+value:[[:space:]]*)(0[0-9]+)([[:space:]]*$)/\\1\"\\2\"\\3/' -e 's/([[:space:]]+value:[[:space:]]*)([A-Z])([[:space:]]*$)/\\1\"\\2\"\\3/' {file_path}"
  
             try:
                 subprocess.run(sed_command, shell=True, check=True)
