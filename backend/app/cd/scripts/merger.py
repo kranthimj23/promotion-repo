@@ -168,8 +168,6 @@ def create_github_branch(github_url, base_branch, new_branch):
             ['git', 'clone', '--single-branch', '-b', base_branch, github_url, new_branch_dir],
             check=True,timeout = 30, stdout=subprocess.DEVNULL
         )
- 
-        print(os.listdir(temp_dir))
         # Create and switch to new branch
         subprocess.run(['git', 'checkout', '-b', new_branch], cwd=new_branch_dir, check=True, timeout=30)
         # Clean  environment folders
@@ -183,7 +181,6 @@ def create_github_branch(github_url, base_branch, new_branch):
             ['git', 'commit', '-m', f'Initialize {new_branch}: Clean  environment folders'],
             cwd=new_branch_dir, check=True, timeout=30, stdout=subprocess.DEVNULL
         )
-        print(os.listdir(new_branch_dir))
         result = subprocess.run(['git', 'push', 'origin', new_branch], cwd=new_branch_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
         #print(f"Created and cleaned branch '{new_branch}' successfully")
         # Update meta-sheet in master branch
