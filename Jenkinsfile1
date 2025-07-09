@@ -34,24 +34,26 @@ pipeline {
 
         stage('Checkout Scripts Repo') {
             steps {
-                deleteDir()  // Clean up workspace before checkout
                 script {
+                    // Ensure the token is passed correctly as part of the Git URL
                     withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
-                        // Checkout the scripts repo
-                        dir('scripts-repo') {
-                            checkout([
-                                $class: 'GitSCM',
-                                branches: [[name: "*/${env.SCRIPTS_BRANCH}"]],
-                                userRemoteConfigs: [[
-                                    url: "${env.SCRIPTS_REPO_URL}",
-                                    credentialsId: env.GIT_CREDENTIALS_ID
-                                ]]
-                            ])
-                        }
+                        // Construct the Git URL using the token in place of the password
+                        def gitUrl = "https://${env.GIT_TOKEN}@github.com/kranthimj23/zdt-manager-src.git"
+                        
+                        // Checkout the scripts repo using the Git URL with token
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: "*/${env.SCRIPTS_BRANCH}"]],
+                            userRemoteConfigs: [[
+                                url: gitUrl,  // Use the Git URL with embedded token
+                                credentialsId: 'jenkins-token'  // Still using the token ID in case it's needed for SCM handling
+                            ]]
+                        ])
                     }
                 }
             }
         }
+
 
         stage('Fetch Branches') {
             steps {
