@@ -451,7 +451,9 @@ def compare_shell_scripts(folder_x_1, folder_x, release_note_path, env):
  
 def execute(target_folder_x, lower_env, higher_env, repo_url):
     try:
-        release_note_path = os.path.join(target_folder_x, "helm-charts", "{higher_env}-values", "release_note")
+        release_note_path = os.path.join(target_folder_x, "helm-charts", f"{higher_env}-values", "release_note")
+        
+        print(release_note_path)
         if os.path.exists(release_note_path) and os.path.isdir(release_note_path):
             print(f"Checking folder: {release_note_path}")
  
@@ -459,10 +461,11 @@ def execute(target_folder_x, lower_env, higher_env, repo_url):
             for filename in os.listdir(release_note_path):
                 # Check if the file ends with .xlsx
                 if filename.endswith('.xlsx'):
+                    print(filename)
                     file_path = os.path.join(release_note_path, filename)
                     print("This is the file path for db-scripts: ",file_path)
                     result = subprocess.run(
-                        ["python3.11", sys.argv[6] ,repo_url, lower_env,higher_env, file_path],
+                        ["python3.12", sys.argv[6] ,repo_url, lower_env, higher_env,file_path],
                         check=True,
                         capture_output=True,
                         text=True
@@ -624,7 +627,7 @@ def main():
     write_changes_to_excel(changes, release_note_path, envs, env_list)
  
     result = execute(target_folder_x, envs[0],envs[1], repo_url)
-    print(result)
+    print("The result is: ", result)
  
     create_upgrade_services_txt(release_note_path, envs[1], target_folder_x)
     try:
