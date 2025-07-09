@@ -561,46 +561,27 @@ def main():
     }
  
     for repo_name, repo_url in repos_info.items():
-        # promote_branch_x_1 = input("Enter the branch containing the stable release: ")
- 
-        # promote_branch_x = input("Enter the branch containing the updated files for release: ")
         promote_branch_x_1 = sys.argv[2]
         promote_branch_x = sys.argv[3]
         
         target_folder_x_1 = os.path.join(os.getcwd(), "generate-config", "promotion-x-1", f"{repo_name}")
-        print(target_folder_x_1)
         target_folder_x = os.path.join(os.getcwd(), "generate-config", "promotion-x", f"{repo_name}")
-        print(target_folder_x)
- 
+
     clone_repo(repo_url, promote_branch_x_1, target_folder_x_1)
- 
-    # To Clone the repo from promotion-x branch
- 
     clone_repo(repo_url, promote_branch_x, target_folder_x)
  
     lower_env = sys.argv[4]
     higher_env = sys.argv[5]
  
-    print("target_folder_x:", repr(target_folder_x))
-    print("higher_env:", repr(higher_env))
- 
- 
     release_note_path = os.path.join(target_folder_x, "helm-charts", f"{higher_env}-values", f"release_note")
     print("Path is :: ", os.path.join(target_folder_x, "helm-charts", f"{higher_env}-values", f"release_note"))
-    if os.path.exists(release_note_path):
-        print(release_note_path)
- 
- 
+
     print("These are the values:", repo_url, promote_branch_x, lower_env, target_folder_x)
     foldernames = os.listdir(target_folder_x)
-    print(foldernames)
  
     for foldername in foldernames:
         print("These are the folder: ",foldername)
- 
-        print(foldername)
         if foldername == "helm-charts":
-            print("true")
             for filename in os.listdir(release_note_path):
                 if filename.startswith("release-note"):
                     excel_file_path =  os.path.join(release_note_path,filename)
