@@ -26,7 +26,7 @@ pipeline {
                     withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                     checkout([
                         $class: 'GitSCM',
-                        branches: [[name: "*/main"]],
+                        branches: [[name: "*/${env.promotion_branch}"]],
                         userRemoteConfigs: [[
                             url: "${env.github_url}",
                             credentialsId: GIT_CREDENTIALS_ID
@@ -57,8 +57,6 @@ pipeline {
                         script: "git log -n 10 --pretty=format:\"%H|%s\" -- helm-charts/sit-values/release_note/*.xlsx",
                         returnStdout: true
                     ).trim()
- 
-                    echo "Recent commits affecting Excel files in ${env.RELEASE_NOTE_DIR}:"
                     echo commits
  
                     def pattern = ~("Updated the release note in the branch: " + env.promotion_branch)
