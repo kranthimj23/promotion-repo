@@ -21,7 +21,7 @@ pipeline {
                         branches: [[name: "*/${env.PROMOTION_BRANCH}"]],
                         userRemoteConfigs: [[
                             url: "${env.PROMO_REPO_URL}",
-                            credentialsId: env.GIT_CREDENTIALS_ID
+                            credentialsId: GIT_CREDENTIALS_ID
                         ]]
                     ])
                 }
@@ -47,7 +47,7 @@ pipeline {
                                 branches: [[name: "*/${env.SCRIPTS_BRANCH}"]],
                                 userRemoteConfigs: [[
                                     url: gitUrl,  // Use the Git URL with embedded token
-                                    credentialsId: 'jenkins-token'  // Still using the token ID in case it's needed for SCM handling
+                                    credentialsId: GIT_CREDENTIALS_ID   // Still using the token ID in case it's needed for SCM handling
                                 ]]
                             ])
                         }
