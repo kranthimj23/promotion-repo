@@ -47,14 +47,16 @@ def get_sheets_with_values(excel_file, env):
     for sheet_name in wb.sheetnames:
         print("the sheet is: ",sheet_name)
  
-    if sheet_name not in ("dev2", "Summary"):
+    if sheet_name not in ("dev2", "Summary", "AQL", "SQL"):
         ws = wb[sheet_name]
  
         # Find the column index of "Value" header in the first row
         value_col_idx = None
         for cell in ws[1]:
             if cell.value == f"{env}-current value":
+                print(cell.value)
                 value_col_idx = cell.column  # This is a 1-based index
+                print(value_col_idx)
                 break
  
         if value_col_idx is not None:
