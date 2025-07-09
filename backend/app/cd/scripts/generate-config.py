@@ -38,42 +38,42 @@ def clone_repo(repo_url, branch_name, target_folder):
     except subprocess.CalledProcessError as e:
         print(f"Error cloning the repository: {e}")
  
- 
- 
 def get_sheets_with_values(excel_file, env):
     wb = load_workbook(excel_file, data_only=True)
-    sheets = ''
- 
+    matching_sheets = ''
+
     for sheet_name in wb.sheetnames:
-        print("the sheet is: ",sheet_name)
- 
-    if sheet_name not in ("dev2", "Summary", "AQL", "SQL"):
-        ws = wb[sheet_name]
- 
-        # Find the column index of "Value" header in the first row
-        value_col_idx = None
-        for cell in ws[1]:
-            if cell.value == f"{env}-current value":
-                print(cell.value)
-                value_col_idx = cell.column  # This is a 1-based index
-                print(value_col_idx)
-                break
- 
-        if value_col_idx is not None:
-            # Check if any cell in the "Value" column (excluding header) is not None or empty
-            for row in ws.iter_rows(min_row=2, min_col=value_col_idx, max_col=value_col_idx):
-                cell_value = row[0].value
-                if cell_value is not None and str(cell_value).strip() != "":
-                    sheets = sheet_name
-                    break  # No need to check further cells in this sheet
- 
-    if not sheets:
-        print("No values updated in the release to promote the env")
+        print("Checking sheet:", sheet_name)
+
+        if sheet_name in ("dev2", "Summary", "AQL", "SQL"):
+            print("Skipping the sheet: ", sheet_name)
+
+        else:
+            ws = wb[sheet_name]
+    
+            # Find the column index of the "env-current value" header
+            value_col_idx = None
+            for cell in ws[1]:
+                if cell.value == f"{env}-current value":
+                    value_col_idx = cell.column  # 1-based index
+                    print(f"Found column for '{env}-current value' in {sheet_name}: Column {value_col_idx}")
+                    break
+    
+            if value_col_idx is not None:
+                for row in ws.iter_rows(min_row=2, min_col=value_col_idx, max_col=value_col_idx):
+                    cell_value = row[0].value
+                    if cell_value is not None and str(cell_value).strip() != "":
+                        matching_sheets = sheet_name
+                        break  # No need to check further cells in this sheet
+
+    if not matching_sheets:
+        print("No values updated in any sheet for promotion.")
     else:
-        print(sheets)
+        print("Sheets with values:", matching_sheets)
+
+    return matching_sheets
  
-    return sheets
- 
+
  
 def read_yaml_files_to_json(folder_path):
     json_data = {}
@@ -590,7 +590,9 @@ def main():
                     print("Excel file path: ", excel_file_path)
                 else:
                     print("Release note does not exist")
- 
+
+         
+            print("hiighherrr: ",higher_env)
             sheet = get_sheets_with_values(excel_file_path, higher_env)
             print(f"Promoting the values in env: {sheet} of {foldername}")
             folder_path = os.path.join(target_folder_x_1, "helm-charts", f"{sheet}-values", "app-values" )
