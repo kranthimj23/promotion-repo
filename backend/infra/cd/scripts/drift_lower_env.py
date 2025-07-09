@@ -323,8 +323,10 @@ def main():
         print("Output:", e.output)
         print("Error:", e.stderr)
         sys.exit(1)
+
+   shutil.rmtree(target_folder_x_1, ignore_errors=True)
+   shutil.rmtree(target_folder_x, ignore_errors=True)
  
 if __name__ == "__main__":
     main()
- 
  
