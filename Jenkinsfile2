@@ -93,7 +93,7 @@ pipeline {
                             }
                         }
 
-                    } else {
+                    else {
                         echo "No matching commit messages found. Skipping Python script execution."
                         error("No matching commit message found.")
                     }
