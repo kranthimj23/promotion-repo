@@ -21,7 +21,13 @@ def clone_repo(repo_url, branch_name, target_folder):
     except Exception as e:
         print(f"Error creating folder '{target_folder}': {e}")
         return
- 
+    github_token = os.getenv("GIT_TOKEN")
+    if github_token and "github.com" in repo_url:
+         # Inject token into repo URL (safe for HTTPS GitHub URLs)
+        if repo_url.startswith("https://"):
+            repo_url = repo_url.replace("https://", f"https://{github_token}@")
+        else:
+            raise ValueError("Unsupported repo_url format. Must start with https://")
     # Clone the specified branch into the target folder
     try:
         subprocess.run(
