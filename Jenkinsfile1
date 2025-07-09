@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         PYTHON_EXEC = 'python3.12'  // Or adjust to 'python' if needed
-        GIT_CREDENTIALS_ID = credentials('jenkins-token')
+        GIT_CREDENTIALS_ID = 'jenkins-token'
         PROMOTION_REPO_URL = 'https://github.com/kranthimj23/promotion-repo.git'  // Update this to your promotion repo URL
         SCRIPTS_REPO_URL = 'https://github.com/kranthimj23/zdt-manager-src.git'  // Update this to your scripts repo URL
         PROMOTION_BRANCH = 'main'  // Branch of promotion repo
@@ -24,7 +24,7 @@ pipeline {
                         branches: [[name: "*/${env.PROMOTION_BRANCH}"]],
                         userRemoteConfigs: [[
                             url: "${env.PROMOTION_REPO_URL}",
-                            credentialsId: 'jenkins-token'
+                            credentialsId: env.GIT_TOKEN
                         ]]
                         ])
                     }
@@ -48,7 +48,7 @@ pipeline {
                                 branches: [[name: "*/${env.SCRIPTS_BRANCH}"]],
                                 userRemoteConfigs: [[
                                     url: "${env.SCRIPTS_REPO_URL}",  // Use the Git URL with embedded token
-                                    credentialsId: 'jenkins-token'   // Still using the token ID in case it's needed for SCM handling
+                                    credentialsId: env.GIT_TOKEN   // Still using the token ID in case it's needed for SCM handling
                                 ]]
                             ])
                         }
