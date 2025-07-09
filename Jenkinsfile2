@@ -95,7 +95,7 @@ pipeline {
                             echo result
                             }
                             def result_infra = sh(
-                                script: "${env.PYTHON_EXEC} drift_promotion ${env.github_url} ${env.promotion_branch} ${env.higher_env}",
+                                script: "${env.PYTHON_EXEC} drift_promotion.py ${env.github_url} ${env.promotion_branch} ${env.higher_env}",
                                 returnStdout: true
                             ).trim()
                             echo result_infra
