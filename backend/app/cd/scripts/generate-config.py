@@ -34,31 +34,30 @@ def clone_repo(repo_url, branch_name, target_folder):
  
  
  
-def get_sheets_with_values(excel_file):
+def get_sheets_with_values(excel_file, env):
     wb = load_workbook(excel_file, data_only=True)
-    sheets = []
+    sheets = ''
  
-    # Get all sheet names except the first one
-    sheet_names = wb.sheetnames[1:]
+    for sheet_name in wb.sheetnames:
+        print("the sheet is: ",sheet_name)
  
-    for sheet_name in sheet_names:
-        if sheet_name not in ("dev2", "Summary"):
-            ws = wb[sheet_name]
+    if sheet_name not in ("dev2", "Summary"):
+        ws = wb[sheet_name]
  
-            # Find the column index of "Value" header in the first row
-            value_col_idx = None
-            for cell in ws[1]:
-                if cell.value == "Value":
-                    value_col_idx = cell.column  # This is a 1-based index
-                    break
+        # Find the column index of "Value" header in the first row
+        value_col_idx = None
+        for cell in ws[1]:
+            if cell.value == f"{env}-current value":
+                value_col_idx = cell.column  # This is a 1-based index
+                break
  
-            if value_col_idx is not None:
-                # Check if any cell in the "Value" column (excluding header) is not None or empty
-                for row in ws.iter_rows(min_row=2, min_col=value_col_idx, max_col=value_col_idx):
-                    cell_value = row[0].value
-                    if cell_value is not None and str(cell_value).strip() != "":
-                        sheets.append(sheet_name)
-                        break  # No need to check further cells in this sheet
+        if value_col_idx is not None:
+            # Check if any cell in the "Value" column (excluding header) is not None or empty
+            for row in ws.iter_rows(min_row=2, min_col=value_col_idx, max_col=value_col_idx):
+                cell_value = row[0].value
+                if cell_value is not None and str(cell_value).strip() != "":
+                    sheets = sheet_name
+                    break  # No need to check further cells in this sheet
  
     if not sheets:
         print("No values updated in the release to promote the env")
@@ -162,9 +161,11 @@ def insert_hardcoded_value(folder,service_list):
     with open(temp_path, 'w') as file:
         file.write(modified_text)
  
-    return modified_text
+    return modified_text 
  
-def apply_changes_to_json(json_data, excel_file_path, sheet_name):
+ 
+ 
+def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, higher_env):
     print("Apply changes to json")
     wb = load_workbook(excel_file_path, data_only=True)
     ws = wb[sheet_name]
@@ -188,47 +189,49 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name):
         change_request = get_cell_value(row_num, 'Change Request')
         key = get_cell_value(row_num, 'Key')
         comments = get_cell_value(row_num, 'Comment')
-        value = get_cell_value(row_num, 'Value')
+        le_cur = get_cell_value(row_num, f'{lower_env}-current value')
+        le_prev = get_cell_value(row_num, f'{lower_env}-previous value')
+        he_cur = get_cell_value(row_num, f'{higher_env}-current value')
+        he_prev = get_cell_value(row_num, f'{higher_env}-previous value')
  
-        # Check for missing or empty value
-        if value is None or (isinstance(value, str) and value.strip() == ""):
-            if change_request == "delete":
-                continue
-            else:
-                raise ValueError(f"Missing or empty value encountered in row {row_num}.")
  
-        # Handle addition of a root object
+        # Handle addition and deletion of a root object
         if key is None or (isinstance(key, str) and key.strip() == ""):
-            if comments == "root object added":
-                new_root_object = service_name
-                if new_root_object not in json_data:
-                    json_data[new_root_object] = {}
-                    print(f"Added new root object: {new_root_object}")
-                if value is not None and (not (isinstance(value, str) and value.strip() == "")):
-                    # Check if the value is a HYPERLINK and extract the path from it
-                    if isinstance(value, str) and value.startswith('file'):
-                        hyperlink_path = extract_hyperlink_path(value)
-                        hyperlink_path = rf'/{hyperlink_path}'
-                        with open(hyperlink_path, 'r') as txt_file:
-                            value = txt_file.read().strip()
-                            print(hyperlink_path)
-                            print(f"valuee isss: {value}")
-                        print(f"Fetched content from {hyperlink_path} and updated value.")
-                        json_data[new_root_object] = try_parse_json(value)
-                    else:
-                        json_data[new_root_object] = try_parse_json(value)
-                        print(f"Stored value in '{new_root_object}': {value}")
-                update_template.append(service_name)
-                continue
+            print(service_name, comments, "root user added/deleted")
  
-            elif comments == "root object deleted":
+            if comments.strip().lower() == "root object deleted":
                 print("root object to be deleted found")
-                if service_name in json_data:
+                if service_name and service_name in json_data:
                     print("True")
                     deleted_service = service_name
                     deleted_services.append(deleted_service)
                     del json_data[service_name]
                     print(f"Deleted root object: {service_name}")
+                else:
+                    print("Did not enter the loop", service_name, json_data[service_name])
+                continue
+ 
+ 
+            elif comments == "root object added":
+                new_root_object = service_name
+                if new_root_object not in json_data:
+                    json_data[new_root_object] = {}
+                    print(f"Added new root object: {new_root_object}")
+                if he_cur is not None and (not (isinstance(he_cur, str) and he_cur.strip() == "")):
+                    # Check if the value is a HYPERLINK and extract the path from it
+                    if isinstance(he_cur, str) and he_cur.startswith('file'):
+                        hyperlink_path = extract_hyperlink_path(he_cur)
+                        hyperlink_path = rf'/{hyperlink_path}'
+                        with open(hyperlink_path, 'r') as txt_file:
+                            he_cur = txt_file.read().strip()
+                            print(hyperlink_path)
+                            print(f"valuee isss: {he_cur}")
+                        print(f"Fetched content from {hyperlink_path} and updated value.")
+                        json_data[new_root_object] = try_parse_json(he_cur)
+                    else:
+                        json_data[new_root_object] = try_parse_json(he_cur)
+                        print(f"Stored value in '{new_root_object}': {he_cur}")
+                update_template.append(service_name)
                 continue
  
             elif service_name in ['data', 'env']:
@@ -238,7 +241,14 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name):
                 print(f"Error: Key is missing or empty in row {row_num}.")
                 raise ValueError(f"Missing or empty key encountered in row {row_num}.")
  
-        parsed_value = try_parse_json(value)
+        # Check for missing or empty value
+        if he_cur is None or (isinstance(he_cur, str) and he_cur.strip() == ""):
+            if change_request == "delete":
+                continue
+            else:
+                raise ValueError(f"Missing or empty value encountered in row {row_num}.")
+ 
+        parsed_value = try_parse_json(he_cur)
  
         if service_name in ['data', 'env']:
             handle_data_env(json_data, service_name, change_request, parsed_value)
@@ -372,7 +382,7 @@ def apply_sed_to_yaml(folder_path):
     for file_name in os.listdir(folder_path):
         if file_name.endswith(".yaml"):
             file_path = os.path.join(folder_path, file_name)
-            sed_command = f"sed -i -E -e 's/([[:space:]]+value:[[:space:]]*)(0[0-9]+)([[:space:]]*$)/\\1\"\\2\"\\3/' -e 's/([[:space:]]+value:[[:space:]]*)([A-Z])([[:space:]]*$)/\\1\"\\2\"\\3/' {file_path}"
+            sed_command = f"sed -i '' -E -e 's/([[:space:]]+value:[[:space:]]*)(0[0-9]+)([[:space:]]*$)/\\1\"\\2\"\\3/' -e 's/([[:space:]]+value:[[:space:]]*)([A-Z])([[:space:]]*$)/\\1\"\\2\"\\3/' {file_path}"
  
             try:
                 subprocess.run(sed_command, shell=True, check=True)
@@ -519,8 +529,8 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
         wb.save(excel_path)
  
         # Commit and push changes to master branch
-        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =repo_path ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd =repo_path, check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.email', 'surabhi.h@hdfcbank.com'], cwd =repo_path ,check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.name', 'MGXR3734'], cwd =repo_path, check=True, timeout=30)
         subprocess.run(['git', '-C', repo_path, 'add', 'meta-sheet.xlsx'], check=True)
         subprocess.run(['git', '-C', repo_path, 'commit', '-m',
                         f'Promote {promote_branch} from {lower_env} to {higher_env}'], check=True)
@@ -551,22 +561,9 @@ def main():
         promote_branch_x = sys.argv[2]
         promote_branch_x_1 = "PF/1.0.0"
         target_folder_x_1 = os.path.join(os.getcwd(), "generate-config", "promotion-x-1", f"{repo_name}")
-        # if not os.path.exists(target_folder_x_1):
-            # os.makedirs(target_folder_x_1)
         print(target_folder_x_1)
         target_folder_x = os.path.join(os.getcwd(), "generate-config", "promotion-x", f"{repo_name}")
-        # if not os.path.exists(target_folder_x):
-        #     # os.makedirs(target_folder_x)
         print(target_folder_x)
-        
-        
-    github_token = os.getenv("GIT_TOKEN")
-    if github_token and "github.com" in repo_url:
-    # Inject token into repo URL (safe for HTTPS GitHub URLs)
-        if repo_url.startswith("https://"):
-            repo_url = repo_url.replace("https://", f"https://{github_token}@")
-        else:
-            raise ValueError("Unsupported repo_url format. Must start with https://")
  
     clone_repo(repo_url, promote_branch_x_1, target_folder_x_1)
  
@@ -574,8 +571,19 @@ def main():
  
     clone_repo(repo_url, promote_branch_x, target_folder_x)
  
-    release_note_path = os.path.join(target_folder_x,"release_note")
     lower_env = sys.argv[3]
+    higher_env = sys.argv[4]
+ 
+    print("target_folder_x:", repr(target_folder_x))
+    print("higher_env:", repr(higher_env))
+ 
+ 
+    release_note_path = os.path.join(target_folder_x, "helm-charts", f"{higher_env}-values", f"release_note")
+    print("Path is :: ", os.path.join(target_folder_x, "helm-charts", f"{higher_env}-values", f"release_note"))
+    if os.path.exists(release_note_path):
+        print(release_note_path)
+ 
+ 
     print("These are the values:", repo_url, promote_branch_x, lower_env, target_folder_x)
     foldernames = os.listdir(target_folder_x)
     print(foldernames)
@@ -584,33 +592,34 @@ def main():
         print("These are the folder: ",foldername)
  
         print(foldername)
-        if foldername.endswith('helm-charts') and os.path.exists(release_note_path):
+        if foldername == "helm-charts":
             print("true")
             for filename in os.listdir(release_note_path):
                 if filename.startswith("release-note"):
                     excel_file_path =  os.path.join(release_note_path,filename)
+                    print("Excel file path: ", excel_file_path)
                 else:
                     print("Release note does not exist")
  
-            sheet_name = get_sheets_with_values(excel_file_path)
-            for sheet in sheet_name:
-                print(f"Promoting the values in env: {sheet} of {foldername}")
-                folder_path = os.path.join(target_folder_x_1, "helm-charts", f"{sheet}-values", "app-values" )
-                initial_output_file = os.path.join(target_folder_x_1, "helm-charts", f"{sheet}-values", "app-values", f"config-{sheet}.json")
-                updated_output_file = os.path.join(target_folder_x, "helm-charts", f"{sheet}-values", "app-values", f"config-{sheet}.json")
-                output_folder = os.path.join(target_folder_x, "helm-charts", f"{sheet}-values", "app-values" )
-                txt_file_path = os.path.join(target_folder_x, "helm-charts", f"{sheet}-values", "app-values", f"{sheet}.txt" )
-                image_tag_file_path = os.path.join(target_folder_x, f"upgrade-services.txt")
-                json_data = read_yaml_files_to_json(folder_path)
-                save_json_to_file(json_data, initial_output_file)
-                updated_json = apply_changes_to_json(json_data, excel_file_path, sheet)
-                insert_hardcoded_value(target_folder_x,update_template)
-                modify_deployment_yaml(target_folder_x,deleted_services)
-                save_json_to_file(updated_json, updated_output_file)
-                create_yaml_files_from_json(updated_output_file, output_folder)
-                apply_sed_to_yaml(output_folder)
-                create_txt_file(excel_file_path,sheet,txt_file_path)
-                # update_txt_file_with_yaml_values(txt_file_path,image_tag_file_path,output_folder)
+            sheet = get_sheets_with_values(excel_file_path, higher_env)
+            print(f"Promoting the values in env: {sheet} of {foldername}")
+            folder_path = os.path.join(target_folder_x_1, "helm-charts", f"{sheet}-values", "app-values" )
+            initial_output_file = os.path.join(target_folder_x_1, "helm-charts", f"{sheet}-values", "app-values", f"config-{sheet}.json")
+            updated_output_file = os.path.join(target_folder_x, "helm-charts", f"{sheet}-values", "app-values", f"config-{sheet}.json")
+            output_folder = os.path.join(target_folder_x, "helm-charts", f"{sheet}-values", "app-values" )
+            txt_file_path = os.path.join(target_folder_x, "helm-charts", f"{sheet}-values", "app-values", f"{sheet}.txt" )
+            image_tag_file_path = os.path.join(target_folder_x, f"upgrade-services.txt")
+ 
+            json_data = read_yaml_files_to_json(folder_path)
+            save_json_to_file(json_data, initial_output_file)
+            updated_json = apply_changes_to_json(json_data, excel_file_path, sheet, lower_env, higher_env)
+            insert_hardcoded_value(target_folder_x,update_template)
+            modify_deployment_yaml(target_folder_x,deleted_services)
+            save_json_to_file(updated_json, updated_output_file)
+            create_yaml_files_from_json(updated_output_file, output_folder)
+            apply_sed_to_yaml(output_folder)
+            create_txt_file(excel_file_path,sheet,txt_file_path)
+            # update_txt_file_with_yaml_values(txt_file_path,image_tag_file_path,output_folder)
  
     try:
         subprocess.run(['git', 'add', "."], cwd =target_folder_x, check=True, capture_output=True, text=True)
@@ -618,8 +627,8 @@ def main():
         print(status_result.stdout)
         print(status_result.stderr)
         # Pull latest changes with rebase to avoid non-fast-forward errors
-        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =target_folder_x ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd =target_folder_x, check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.email', 'surabhi.h@hdfcbank.com'], cwd =target_folder_x ,check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.name', 'MGXR3734'], cwd =target_folder_x, check=True, timeout=30)
         subprocess.run(['git', 'commit', '-m',
                     f'Config files generated: {sys.argv[2]} '], cwd =target_folder_x, check=True, capture_output=True, text=True)
         subprocess.run(['git', 'pull', '--rebase', 'origin', sys.argv[2]], cwd=target_folder_x, check=True, capture_output=True, text=True)
