@@ -59,7 +59,7 @@ pipeline {
         stage('Fetch Branches') {
             steps {
                 script {
-                    def scriptPath = "zdt-manager-src/${env.SCRIPTS_FOLDER_APP}/merger.py"
+                    def scriptPath = "tmp-scripts-repo/${env.SCRIPTS_FOLDER_APP}/merger.py"
                     def result = sh(
                         script: "${env.PYTHON_EXEC} ${scriptPath} ${env.lower_env} ${env.higher_env} ${env.github_url} ${env.new_version}",
                         returnStdout: true,
@@ -90,7 +90,7 @@ pipeline {
                 script {
                     if (env.NEW_BRANCH?.toLowerCase() == 'true') {
                         echo "Triggering Push-Files-To-Branch job for new branch: ${env.X2_BRANCH}"
-                        def scriptPath = "zdt-manager-src/${env.SCRIPTS_FOLDER_APP}/values-promotion.py"
+                        def scriptPath = "tmp-scripts-repo/${env.SCRIPTS_FOLDER_APP}/values-promotion.py"
                         sh "${env.PYTHON_EXEC} ${scriptPath} ${env.github_url} ${env.X2_BRANCH}"
                     } else {
                         echo "Skipping Push-Files-To-Branch because NEW_BRANCH is not 'true'. Got: '${env.NEW_BRANCH}'"
@@ -106,9 +106,9 @@ pipeline {
             steps {
                 script {
                     if (env.X1_BRANCH && env.X2_BRANCH) {
-                        def appReleaseNoteScript = "zdt-manager-src/${env.SCRIPTS_FOLDER_APP}/create-release-note.py"
-                        def dbScript = "zdt-manager-src/${env.SCRIPTS_FOLDER_APP}/database_scripts_merger.py"
-                        def infraReleaseNoteScript = "zdt-manager-src/${env.SCRIPTS_FOLDER_INFRA}/drift_lower_env.py"
+                        def appReleaseNoteScript = "tmp-scripts-repo/${env.SCRIPTS_FOLDER_APP}/create-release-note.py"
+                        def dbScript = "tmp-scripts-repo/${env.SCRIPTS_FOLDER_APP}/database_scripts_merger.py"
+                        def infraReleaseNoteScript = "tmp-scripts-repo/${env.SCRIPTS_FOLDER_INFRA}/drift_lower_env.py"
                         
                         sh 'chmod +x ${dbScript}'
                         echo "Running create-release-note.py with parameters: ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url} ${dbScript}"
