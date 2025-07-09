@@ -48,7 +48,6 @@ def remove_empty_columns(df):
     
     return df
  
- 
 def get_row_index(sheet,object_id):
     rows =len(sheet)
     all_columns = sheet.columns.tolist()
@@ -65,14 +64,14 @@ def get_row_index(sheet,object_id):
             return ind
     return
  
-def update_target_file(differences_df, target_file):
+def update_target_file(differences_df, target_file ,henv):
     """Update the target DataFrame based on differences."""
     workbook = load_excel_sheets(target_file)
     for _, row in differences_df.iterrows():
         sheets_name = row['Sheet Name']
         field = row['Field']
         object_id = row['Object Id']
-        dr_value = row['SIT Value']
+        dr_value = row[f'{henv} Value']
         Change = row['Change']
         # print(sheet_name)
         # print(field)
@@ -135,35 +134,7 @@ def update_target_file(differences_df, target_file):
     # Save the updated workbook to the Excel file
     with pd.ExcelWriter(target_file) as writer:
         for sheet_name, df in workbook.items():
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
- 
-    # for _, row in differences_df.iterrows():
-    #     sheet_name = row['Sheet Name']
-    #     field = row['Field']
-    #     # field_row = row['Field Row']
-    #     object_id = row['Object Id']
-    #     dr_value = row['DR Value']
-        
-        
-    #     if sheet_name in workbook.keys():
-    #         df = workbook[sheet_name]
-    #         index = get_row_index(df,object_id )
-    #         print(index)
-    #         print(sheet_name)
-    #         print(field)
-    #         print(dr_value)
-    #         workbook[sheet_name][field].iloc[index] = dr_value
-            # col_index = get_column_index(workbook[sheet_name], field)
-            
-            
-            # if field  in workbook[sheet_name].columns:
-            #     print(field)
-            # if field_row > 1 or col_index > 1:
-                # if sheet_name == "jenkins_vm":
-                    # print("worked")
-                    # print(str(col_index)+" "+str(field_row) +" " +str(dr_value))
-                # workbook[sheet_name].cell(row = field_row,column = col_index).value = dr_value  # Update with DR Value
-                # print(workbook[sheet_name].cell(row = field_row ,column = col_index))
+            df.to_excel(writer, sheet_name=sheet_name, index=False) 
             
     return workbook
  
@@ -208,9 +179,13 @@ def main():
     clone_repo(src_repo, "zdt-application", src_folder)
     clone_repo(repo_url, promote_branch_x, target_folder_x)
  
-    differences_file =  f'{target_folder_x}/helm-charts/{henv}-values/infra-values/release_note/infra_difference.xlsx'   # Update with your actual path
-    target_file = f'{target_folder_x}/helm-charts/{henv}-values/infra-values/dataset/infra_sheet.xlsx'
-    target_autotfvars =  f'{target_folder_x}/helm-charts/{henv}-values/infra-values/terraform.tfvars'
+ 
+    differences_file = os.path.join(target_folder_x, "helm-charts", f"{henv}-values", "infra-values", "release_note", "infra_difference.xlsx")
+    target_file = os.path.join(target_folder_x, "helm-charts", f"{henv}-values", "infra-values", "dataset", "infra_sheet.xlsx")
+    target_autotfvars = os.path.join(target_folder_x, "helm-charts", f"{henv}-values", "infra-values", "terraform.tfvars")
+    script_path = os.path.join(src_folder, "backend", "infra", "cd", "scripts", "generate_tfvars.py")
+    tmpl_path = os.path.join(src_folder, "backend", "infra", "cd", "tmpl")
+
     # subprocess.run()
    # Specify path to existing target file
     # output_file = '/Users/m26395/Downloads/updatehigher-UAT1_drx.xlsx'  # Specify output path for new file
@@ -219,13 +194,14 @@ def main():
     differences = load_excel_sheets(differences_file)
     differences_df = differences["differences"]
  
- 
-    updated_workbook = update_target_file(differences_df, target_file)
+    updated_workbook = update_target_file(differences_df, target_file,henv)
   
     print(f"Updated infra sheet saved to {target_file}")
- 
+    print(f"Updated terraform.tfvars saved to {target_autotfvars}")
+    print(f'script path: {script_path}')
+    print(f'tmpl path: {tmpl_path}')    
     result = subprocess.run(
-                        ["python3.11", f"{src_folder}/backend/infra/cd/scripts/generate_tfvars.py" , target_file ,target_autotfvars, f"{src_folder}/backend/infra/backend/infra/cd/tmpl" ],
+                        ["python", script_path, target_file ,target_autotfvars, tmpl_path ],
                         check=True,
                         capture_output=True,
                         text=True
@@ -257,12 +233,11 @@ def main():
         print("Output:", e.output)
         print("Error:", e.stderr)
         sys.exit(1)
- 
- 
- 
- 
- 
- 
+        
+    shutil.rmtree(target_folder_x, ignore_errors=True)
+    shutil.rmtree(src_folder, ignore_errors=True)
+
+
 if __name__ == "__main__":
     main()
  

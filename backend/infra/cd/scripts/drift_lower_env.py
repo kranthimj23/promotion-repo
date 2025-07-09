@@ -169,11 +169,16 @@ def compare_dataframes(df1, df2, df3, sheet_name,henv,lenv):
 #     dff.to_excel(output_file,index=False, engine='openpyxl',sheet_name="scaled_resources")
  
  
+
 def save_to_excel(differences, scaled_resources, output_file):
     """Save the differences and scaled resources to an Excel file."""
+
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
     df = pd.DataFrame(differences)
     dff = pd.DataFrame(scaled_resources)
-    
+
     with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
         df.to_excel(writer, sheet_name="differences", index=False)
         dff.to_excel(writer, sheet_name="scaled_resources", index=False)
@@ -204,7 +209,7 @@ def copy_contents(src_folder, dst_folder):
         s = os.path.join(src_folder, item)
         d = os.path.join(dst_folder, item)
         if os.path.isdir(s):
-            shutil.copytree(s, d, dirs_exist_ok=True)  # Python 3.8+
+            shutil.copytree(s, d, dirs_exist_ok=True)
         else:
             shutil.copy2(s, d)
     
@@ -227,19 +232,25 @@ def main():
     clone_repo(repo_url, promote_branch_x, target_folder_x)
  
  
-    input_excel_1 = f'{target_folder_x_1}/helm-charts/{lenv}-values/infra-values/dataset/infra_sheet.xlsx'
-    input_excel_2 = f'{target_folder_x}/helm-charts/{lenv}-values/infra-values/dataset/infra_sheet.xlsx'
-    input_excel_3 = f'{target_folder_x_1}/helm-charts/{henv}-values/infra-values/dataset/infra_sheet.xlsx'
+    input_excel_1 = os.path.join(target_folder_x_1, "helm-charts", f"{lenv}-values", "infra-values", "dataset", "infra_sheet.xlsx")
+    input_excel_2 = os.path.join(target_folder_x,   "helm-charts", f"{lenv}-values", "infra-values", "dataset", "infra_sheet.xlsx")
+    input_excel_3 = os.path.join(target_folder_x_1, "helm-charts", f"{henv}-values", "infra-values", "dataset", "infra_sheet.xlsx")
+
+    x_1infra_folder = os.path.join(target_folder_x_1, "helm-charts", f"{henv}-values", "infra-values")
+    x_infra_folder  = os.path.join(target_folder_x,   "helm-charts", f"{henv}-values", "infra-values")
  
-    x_1infra_folder =  f'{target_folder_x_1}/helm-charts/{henv}-values/infra-values/'
-    x_infra_folder = f'{target_folder_x}/helm-charts/{henv}-values/infra-values/'
- 
+    print("Copying from:", x_infra_folder)
+    print("Copying to:", x_1infra_folder)
     copy_contents(x_1infra_folder, x_infra_folder)
-    print(f"Copied contents from {x_1infra_folder} to {x_infra_folder}")
+
  
  
  
-    output_file = f'{target_folder_x}/helm-charts/{henv}-values/infra-values/release_note/infra_difference.xlsx'  # Specify output path
+    # output_file = f'{target_folder_x}\helm-charts\{henv}-values\infra-values/releaseno\infra_difference.xlsx'  # Specify output path
+ 
+    output_file = os.path.join(f"{target_folder_x}", "helm-charts", f"{henv}-values", "infra-values", "release_note", "infra_difference.xlsx")
+ 
+ 
  
     # Load all sheets from both Excel files
     sheets_1 = load_excel_sheets(input_excel_1)
@@ -281,7 +292,10 @@ def main():
  
  
     # Save the differences to an Excel file
-    save_to_excel(differences,scaled_resources , output_file,)
+    print(output_file)
+    
+    save_to_excel(differences,scaled_resources , output_file)
+    
     print(f"Differences saved to {output_file}")
  
  
