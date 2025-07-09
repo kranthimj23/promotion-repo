@@ -10,24 +10,20 @@ pipeline {
         SCRIPTS_FOLDER_APP = 'backend/app/cd/scripts'  // Folder structure in the scripts repo
         SCRIPTS_FOLDER_INFRA = 'backend/infra/cd/scripts'
     }
- 
+
     stages {
- 
         stage('Checkout Promotion Repo') {
             steps {
-                deleteDir()  // Clean up workspace before checkout
                 script {
-                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
-                        // Checkout the promotion repo
-                        checkout([
-                            $class: 'GitSCM',
-                            branches: [[name: "*/${env.PROMOTION_BRANCH}"]],
-                            userRemoteConfigs: [[
-                                url: "${env.PROMOTION_REPO_URL}",
-                                credentialsId: env.GIT_CREDENTIALS_ID
-                            ]]
-                        ])
-                    }
+                    // Clone the promotion repo into the default workspace
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: "*/${env.PROMOTION_BRANCH}"]],
+                        userRemoteConfigs: [[
+                            url: "${env.PROMO_REPO_URL}",
+                            credentialsId: env.GIT_CREDENTIALS_ID
+                        ]]
+                    ])
                 }
             }
         }
@@ -35,25 +31,30 @@ pipeline {
         stage('Checkout Scripts Repo') {
             steps {
                 script {
+                    // Create a temporary directory for scripts repo
+                    def tempDir = 'tmp-scripts-repo'
+                    sh "mkdir -p ${tempDir}"
+                    
                     // Ensure the token is passed correctly as part of the Git URL
                     withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                         // Construct the Git URL using the token in place of the password
                         def gitUrl = "https://${env.GIT_TOKEN}@github.com/kranthimj23/zdt-manager-src.git"
                         
-                        // Checkout the scripts repo using the Git URL with token
-                        checkout([
-                            $class: 'GitSCM',
-                            branches: [[name: "*/${env.SCRIPTS_BRANCH}"]],
-                            userRemoteConfigs: [[
-                                url: gitUrl,  // Use the Git URL with embedded token
-                                credentialsId: 'jenkins-token'  // Still using the token ID in case it's needed for SCM handling
-                            ]]
-                        ])
+                        // Checkout the scripts repo into the temporary directory
+                        dir(tempDir) {
+                            checkout([
+                                $class: 'GitSCM',
+                                branches: [[name: "*/${env.SCRIPTS_BRANCH}"]],
+                                userRemoteConfigs: [[
+                                    url: gitUrl,  // Use the Git URL with embedded token
+                                    credentialsId: 'jenkins-token'  // Still using the token ID in case it's needed for SCM handling
+                                ]]
+                            ])
+                        }
                     }
                 }
             }
         }
-
 
         stage('Fetch Branches') {
             steps {
@@ -101,13 +102,6 @@ pipeline {
             }
         }
 
-        // stage('Delay-2') {
-        //     steps {
-        //         echo "Waiting for 5 seconds..."
-        //         sleep time: 5, unit: 'SECONDS'
-        //     }
-        // }
-
         stage('Generate release-note for Application, DB and Infra') {
             steps {
                 script {
@@ -129,12 +123,12 @@ pipeline {
             }
         }
 
-        stage('Clean up') {
+        stage('Post Checkout Clean Up') {
             steps {
-                echo "Cleaning up cloned repositories..."
                 script {
-                    // Delete both promotion-repo and scripts-repo
-                    sh 'rm -rf *'
+                    // Clean up: Delete the temporary directory after use
+                    def tempDir = 'tmp-scripts-repo'
+                    sh "rm -rf ${tempDir}"
                 }
             }
         }
