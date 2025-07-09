@@ -551,15 +551,16 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
 def main():
  
     repos_info = {
-        'promo-helm-charts': sys.argv[1]
+        'promotion-repo': sys.argv[1]
     }
  
     for repo_name, repo_url in repos_info.items():
         # promote_branch_x_1 = input("Enter the branch containing the stable release: ")
  
         # promote_branch_x = input("Enter the branch containing the updated files for release: ")
-        promote_branch_x = sys.argv[2]
-        promote_branch_x_1 = "PF/1.0.0"
+        promote_branch_x_1 = sys.argv[2]
+        promote_branch_x = sys.argv[3]
+        
         target_folder_x_1 = os.path.join(os.getcwd(), "generate-config", "promotion-x-1", f"{repo_name}")
         print(target_folder_x_1)
         target_folder_x = os.path.join(os.getcwd(), "generate-config", "promotion-x", f"{repo_name}")
@@ -571,8 +572,8 @@ def main():
  
     clone_repo(repo_url, promote_branch_x, target_folder_x)
  
-    lower_env = sys.argv[3]
-    higher_env = sys.argv[4]
+    lower_env = sys.argv[4]
+    higher_env = sys.argv[5]
  
     print("target_folder_x:", repr(target_folder_x))
     print("higher_env:", repr(higher_env))
