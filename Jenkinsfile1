@@ -14,6 +14,7 @@ pipeline {
     stages {
         stage('Checkout Promotion Repo') {
             steps {
+                deleteDir()
                 script {
                     withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
 
@@ -25,11 +26,11 @@ pipeline {
                             url: "${env.PROMOTION_REPO_URL}",
                             credentialsId: env.GIT_CREDENTIALS_ID
                         ]]
-                    ])
+                        ])
+                    }
                 }
             }
         }
-    }
 
         stage('Checkout Scripts Repo') {
             steps {
@@ -40,16 +41,13 @@ pipeline {
                     
                     // Ensure the token is passed correctly as part of the Git URL
                     withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
-                        // Construct the Git URL using the token in place of the password
-                        def gitUrl = "https://${env.GIT_TOKEN}@github.com/kranthimj23/zdt-manager-src.git"
-                        
                         // Checkout the scripts repo into the temporary directory
                         dir(tempDir) {
                             checkout([
                                 $class: 'GitSCM',
                                 branches: [[name: "*/${env.SCRIPTS_BRANCH}"]],
                                 userRemoteConfigs: [[
-                                    url: gitUrl,  // Use the Git URL with embedded token
+                                    url: "${env.SCRIPTS_REPO_URL}",  // Use the Git URL with embedded token
                                     credentialsId: env.GIT_CREDENTIALS_ID   // Still using the token ID in case it's needed for SCM handling
                                 ]]
                             ])
