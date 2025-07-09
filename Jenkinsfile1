@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         PYTHON_EXEC = 'python3.12'  // Or adjust to 'python' if needed
-        GIT_CREDENTIALS_ID = credentials('jenkins-token')
+        GIT_CREDENTIALS_ID = 'jenkins-token'
         PROMOTION_REPO_URL = 'https://github.com/kranthimj23/promotion-repo.git'  // Update this to your promotion repo URL
         SCRIPTS_REPO_URL = 'https://github.com/kranthimj23/zdt-manager-src.git'  // Update this to your scripts repo URL
         PROMOTION_BRANCH = 'main'  // Branch of promotion repo
@@ -15,6 +15,8 @@ pipeline {
         stage('Checkout Promotion Repo') {
             steps {
                 script {
+                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+
                     // Clone the promotion repo into the default workspace
                     checkout([
                         $class: 'GitSCM',
