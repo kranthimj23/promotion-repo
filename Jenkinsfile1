@@ -23,7 +23,7 @@ pipeline {
                         branches: [[name: "*/${env.PROMOTION_BRANCH}"]],
                         userRemoteConfigs: [[
                             url: "${env.PROMOTION_REPO_URL}",
-                            credentialsId: GIT_CREDENTIALS_ID
+                            credentialsId: env.GIT_CREDENTIALS_ID
                         ]]
                     ])
                 }
@@ -50,7 +50,7 @@ pipeline {
                                 branches: [[name: "*/${env.SCRIPTS_BRANCH}"]],
                                 userRemoteConfigs: [[
                                     url: gitUrl,  // Use the Git URL with embedded token
-                                    credentialsId: GIT_CREDENTIALS_ID   // Still using the token ID in case it's needed for SCM handling
+                                    credentialsId: env.GIT_CREDENTIALS_ID   // Still using the token ID in case it's needed for SCM handling
                                 ]]
                             ])
                         }
