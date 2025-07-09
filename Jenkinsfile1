@@ -20,7 +20,7 @@ pipeline {
                         $class: 'GitSCM',
                         branches: [[name: "*/${env.PROMOTION_BRANCH}"]],
                         userRemoteConfigs: [[
-                            url: "${env.PROMO_REPO_URL}",
+                            url: "${env.PROMOTION_REPO_URL}",
                             credentialsId: GIT_CREDENTIALS_ID
                         ]]
                     ])
