@@ -627,7 +627,7 @@ def main():
         print("Pulled latest changes successfully.")
  
         # Push changes
-        push_result = subprocess.run(['git', 'push', 'origin', sys.argv[2]], cwd=target_folder_x, check=True, capture_output=True, text=True)
+        push_result = subprocess.run(['git', 'push', 'origin', sys.argv[3]], cwd=target_folder_x, check=True, capture_output=True, text=True)
         print("Push successful:")
         print(push_result.stdout)
  
