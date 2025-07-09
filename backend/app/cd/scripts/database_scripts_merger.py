@@ -308,6 +308,10 @@ def merge_branches(branches, promotion_branch, aql_folder, sql_folder, lower_env
                 # If the content is actually modified (or non-empty), write to file
                 if modified_content:
                     file_path = os.path.join(folder, file_name)
+
+                    # Ensure the directory exists
+                    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
                     with open(file_path, 'w') as f:
                         f.write(modified_content)
                     print(f"Wrote content to {file_path}")
@@ -356,7 +360,7 @@ def merge_branches(branches, promotion_branch, aql_folder, sql_folder, lower_env
         merge_files(".aql", aql_folder, branches, promotion_branch)
  
         # Merge SQL files
-        merge_files(".sql", sql_folder, branches, promotion_branch)
+        # merge_files(".sql", sql_folder, branches, promotion_branch)
  
         # Commit the changes
         subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =os.getcwd() ,check=True, timeout=30)
@@ -395,19 +399,21 @@ def clone_repo(repo_url, branch_name, target_folder):
  
  
 if __name__ == "__main__":
+    main_temp_dir = tempfile.mkdtemp()
     github_url = sys.argv[1]
     lower_env = sys.argv[2]
     higher_env = sys.argv[3]
+
+        
     branches_to_merge = get_branch_range(lower_env, higher_env)
     promotion_branch_name = branches_to_merge[-1]
-    aql_folder_name = rf"helm-charts/{lower_env}-values/db-scripts/AQL"
-    sql_folder_name = rf"helm-charts/{lower_env}-values/db-scripts/SQL"
-    target_path = r"delta-db-scripts"
-    release_note = sys.argv[4]
-    clone_repo(github_url, promotion_branch_name, target_path)
-    os.chdir(target_path) #change directory to target
+    aql_folder_name = rf'helm-charts/{lower_env}-values/db-scripts/AQL'
+    sql_folder_name = rf'helm-charts/{lower_env}-values/db-scripts/SQL'
+    release_note_path = sys.argv[4]
+    release_note = os.path.join(main_temp_dir, release_note_path)
+    print(release_note)
+    clone_repo(github_url, promotion_branch_name, main_temp_dir)
+    os.chdir(main_temp_dir) #change directory to target
     merge_branches(branches_to_merge, promotion_branch_name, aql_folder_name, sql_folder_name,lower_env,higher_env)
     update_meta_sheet(lower_env, higher_env, promotion_branch_name, github_url)
     print("Scripts executed")
- 
- 
