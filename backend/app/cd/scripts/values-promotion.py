@@ -116,7 +116,7 @@ def main():
                 yaml_files = [(f.name, f.read_text()) for f in Path(source_path).glob("*.yaml")]
             collected_files.extend(yaml_files)
             print(f"Fetched {len(yaml_files)} yaml files from {repo}")
- 
+            shutil.rmtree(app_temp_dir)
         except Exception as e:
             print(f"Failed to fetch from {repo}: {e}")
  
@@ -136,6 +136,7 @@ def main():
             repo_name = Path(repo).stem
             repo_path = os.path.join(aql_temp_dir, repo_name)
             run_git_command(f"git clone --branch main {repo}", cwd=aql_temp_dir)
+            run_git_command(f"git pull origin main", cwd=repo_path)
  
             source_path_aql = os.path.join(repo_path, source_aql_relative_path)
             aql_files = []
@@ -143,6 +144,7 @@ def main():
                 aql_files = [(f.name, f.read_text()) for f in Path(source_path_aql).glob("*.aql")]
             collected_aql_files.extend(aql_files)
             print(f"Fetched {len(aql_files)} aql files from {repo}")
+            shutil.rmtree(aql_temp_dir)
  
         except Exception as e:
             print(f"Failed to fetch from {repo}: {e}")
