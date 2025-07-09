@@ -8,10 +8,10 @@ pipeline {
     agent any // add the label
  
     environment {
-        GIT_CREDENTIALS_ID = '' //add the jenkins credentials
-        PYTHON_EXEC = 'python3.11'  // or your python executable path
-
+        PYTHON_EXEC = 'python3.12'  // Or adjust to 'python' if needed
+        GIT_CREDENTIALS_ID = credentials('jenkins-token')
     }
+
  
     // Declare executePython at pipeline level to share across stages
 
@@ -77,13 +77,19 @@ pipeline {
             steps {
                 script {
                     if (executePython) {
-                        configFileProvider([configFile(fileId: 'generate-config', targetLocation: 'generate-config.py')]) {
+                        configFileProvider([configFile(fileId: 'generate-config', targetLocation: 'generate-config.py'), configFile(fileId: 'drift_promotion', targetLocation: 'drift_promotion.py')]) {
                             withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                             def result = sh(
-                                script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch} ${env.lower_env}",
+                                script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch} ${env.lower_env} ${env.higher_env}",
                                 returnStdout: true
                             ).trim()
                             echo result
+                            }
+                            def result_infra = sh(
+                                script: "${env.PYTHON_EXEC} drift_promotion ${env.github_url} ${env.promotion_branch} ${env.higher_env}",
+                                returnStdout: true
+                            ).trim()
+                            echo result_infra
                             }
                         }
 
