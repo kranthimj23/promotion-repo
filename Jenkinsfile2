@@ -92,14 +92,14 @@ pipeline {
                                 def result_infra = sh(
                                 script: "${env.PYTHON_EXEC} drift_promotion.py ${env.github_url} ${env.promotion_branch} ${env.higher_env}",
                                 returnStdout: true
-                            ).trim()
-                            
+                                ).trim()
                                 echo result_infra
+
                                 def result = sh(
                                 script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch} ${env.lower_env} ${env.higher_env}",
                                 returnStdout: true
-                            ).trim()
-                            echo result
+                                ).trim()
+                                echo result
                             }
                            
                             }
