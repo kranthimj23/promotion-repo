@@ -1,0 +1,15 @@
+image:
+  pullPolicy: IfNotPresent
+  repository: asia-south1-docker.pkg.dev/devops-ai-labs-1/service-auth/auth
+  tag: 4-dev
+replicaCount: 2
+resources:
+  limits:
+    cpu: 1000m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+service:
+  port: 8080
+  type: ClusterIP
