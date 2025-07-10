@@ -15,3 +15,10 @@ resources:
 service:
   port: 8080
   type: ClusterIP
+
+env:
+  service_auth:
+    - name: key1
+      value: value1
+    - name: key2
+      value: value2
