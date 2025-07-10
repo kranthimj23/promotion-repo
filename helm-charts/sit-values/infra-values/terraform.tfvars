@@ -434,7 +434,7 @@ project-sit-bucket-9  = {
 
         force_destroy               = false
 
-        uniform_bucket_level_access = false
+        uniform_bucket_level_access = true
 
         enable_versioning           = true
 
@@ -453,7 +453,7 @@ project-sit-bucket-9  = {
 
             condition = {
 
-              age = 30
+              age = 35
 
             }
 
@@ -481,58 +481,6 @@ project-sit-bucket-9  = {
 
 
 project-sit-bucket-10  = {
-
-        storage_class               = "COLDLINE"
-
-        force_destroy               = false
-
-        uniform_bucket_level_access = false
-
-        enable_versioning           = false
-
-        retention_policy            = 0
-
-        labels                      = {
-      environment = "sit"
-      team        = "platform"
-    }
-
-        lifecycle_rules = [
-
-          {
-
-            action_type = "Delete"
-
-            condition = {
-
-              age = 30
-
-            }
-
-          }
-
-        ]
-
-        cors = [
-
-          {
-
-                origin          = ["*"]
-
-                method          = ["GET"]
-
-                response_header = ["Content-Type"]
-
-                max_age_seconds = 3600
-
-          }
-
-        ]
-
-  },
-
-
-project-sit-bucket-11  = {
 
         storage_class               = "COLDLINE"
 
@@ -640,7 +588,7 @@ pull-sub-sit-10 = {
 
     topic                       = "topic-sit-10"
 
-    ack_deadline_seconds       = "60"
+    ack_deadline_seconds       = "120"
 
     message_retention_duration = "3600s"
 
@@ -655,18 +603,6 @@ pull-sub-sit-12 = {
     ack_deadline_seconds       = "60"
 
     message_retention_duration = "3600s"
-
-  },
-
-pull-sub-sit-11 = {
-
-    name                        = "pull-sub-sit-11"
-
-    topic                       = "topic-sit-9"
-
-    ack_deadline_seconds       = "60"
-
-    message_retention_duration = "1200s"
 
   },
 
