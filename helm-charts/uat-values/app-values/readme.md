@@ -1,0 +1,1 @@
+The files of /tmp/tmp_hmin4up/new_branch/helm-charts/uat-values are stored here
