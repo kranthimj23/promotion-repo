@@ -1,0 +1,4 @@
+
+apiVersion: v2
+name: promotion-repo
+version: 0.1.0
