@@ -10,13 +10,13 @@ def deploy_service(text_file, env, env_namespace):
 
     for items in first_col_values:
 
-        service = items.split(":")[0].strip()
+        service = items.strip()
 
-        microservices = items.split(":")[1].strip()
+        # microservices = items.split(":")[1].strip()
 
         env_namespace = env_namespace.strip()
 
-        command = f"helm upgrade --install {microservices} helm-charts -f helm-charts/{env}-values/{service}.yaml -n {env_namespace}"
+        command = f"helm upgrade --install {service} helm-charts -f helm-charts/{env}-values/app-values/{service}.yaml -n {env_namespace}"
 
         result = subprocess.run(command, shell=True, check=True)
 
