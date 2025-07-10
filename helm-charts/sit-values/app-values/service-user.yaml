@@ -3,19 +3,22 @@ serviceName: service-user
 image:
   pullPolicy: IfNotPresent
   repository: asia-south1-docker.pkg.dev/devops-ai-labs-1/service-user/user
-  tag: 21-sit
-replicaCount: 2
+  tag: 5-sit
+replicaCount: 3
 resources:
   limits:
-    cpu: 600m
-    memory: 256Mi
+    cpu: 100m
+    memory: 512Mi
   requests:
-    cpu: 1200m
+    cpu: 200m
     memory: 256Mi
 service:
   port: 8080
   type: ClusterIP
+
 env:
-- service_user:
-  - name: key1
-    value: value1
+  service_user:
+    - name: key1
+      value: value1
+    - name: key2
+      value: value2
