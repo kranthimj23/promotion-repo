@@ -1,1 +1,1 @@
-The files of /tmp/tmp_hmin4up/new_branch/helm-charts/prod-values are stored here
+The files of /tmp/tmp_hmin4up/new_branch/helm-charts/dev-values are stored here

@@ -20,7 +20,6 @@ def deploy_service(text_file, env, env_namespace):
 
         result = subprocess.run(command, shell=True, check=True)
 
-        print(f"{service} : {microservices} end")
 
     return result
 
