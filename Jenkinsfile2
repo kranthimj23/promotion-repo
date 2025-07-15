@@ -8,10 +8,10 @@ pipeline {
     agent any // add the label
  
     environment {
-        GIT_CREDENTIALS_ID = '' //add the jenkins credentials
-        PYTHON_EXEC = 'python3.11'  // or your python executable path
-
+        PYTHON_EXEC = 'python3.11'  // Or adjust to 'python' if needed
+        GIT_CREDENTIALS_ID = credentials('jenkins-token')
     }
+
  
     // Declare executePython at pipeline level to share across stages
 
@@ -26,13 +26,24 @@ pipeline {
                     withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                     checkout([
                         $class: 'GitSCM',
-                        branches: [[name: "*/main"]],
+                        branches: [[name: "*/${env.promotion_branch}"]],
                         userRemoteConfigs: [[
                             url: "${env.github_url}",
                             credentialsId: GIT_CREDENTIALS_ID
                         ]]
                         ])
                     }
+                }
+            }
+        }
+
+        stage('Debug Git Log') {
+            steps {
+                script {
+                    sh 'ls -lh helm-charts/sit-values/release_note/'
+                    sh 'git status'
+                    sh 'git log -n 5 --oneline'
+                    sh 'git log -n 10 --pretty=format:"%H|%s" -- helm-charts/sit-values/release_note/'
                 }
             }
         }
@@ -43,11 +54,9 @@ pipeline {
                 script {
                     echo "Checking commits in folder: release_note"
                     def commits = sh(
-                        script: "git log -n 10 --pretty=format:\"%H|%s\" -- release_note/*.xlsx",
+                        script: "git log -n 10 --pretty=format:\"%H|%s\" -- helm-charts/sit-values/release_note/*.xlsx",
                         returnStdout: true
                     ).trim()
- 
-                    echo "Recent commits affecting Excel files in ${env.RELEASE_NOTE_DIR}:"
                     echo commits
  
                     def pattern = ~("Updated the release note in the branch: " + env.promotion_branch)
@@ -77,17 +86,26 @@ pipeline {
             steps {
                 script {
                     if (executePython) {
-                        configFileProvider([configFile(fileId: 'generate-config', targetLocation: 'generate-config.py')]) {
+                        configFileProvider([configFile(fileId: 'generate-config', targetLocation: 'generate-config.py'), configFile(fileId: 'drift_promotion', targetLocation: 'drift_promotion.py')]) {
                             withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
-                            def result = sh(
-                                script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch} ${env.lower_env}",
+                                
+                                def result_infra = sh(
+                                script: "${env.PYTHON_EXEC} drift_promotion.py ${env.github_url} ${env.promotion_branch} ${env.higher_env}",
                                 returnStdout: true
-                            ).trim()
-                            echo result
+                                ).trim()
+                                echo result_infra
+
+                                def result = sh(
+                                script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch} ${env.lower_env} ${env.higher_env}",
+                                returnStdout: true
+                                ).trim()
+                                echo result
+                            }
+                           
                             }
                         }
 
-                    } else {
+                    else {
                         echo "No matching commit messages found. Skipping Python script execution."
                         error("No matching commit message found.")
                     }
@@ -96,5 +114,3 @@ pipeline {
         }
     }
 }
-
- 
