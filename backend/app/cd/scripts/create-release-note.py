@@ -253,7 +253,7 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
         for k in le_new.keys():
             new_key_path = f"{path}//{k}" if path else k
             if k not in le_old:
-                changes.append((root, 'add', new_key_path, json.dumps(le_new[k], indent=4), json.dumps(le_old[k], indent=4),'','', 'Added'))
+                changes.append((root, 'add', new_key_path, json.dumps(le_new[k], indent=4), '','','', 'Added'))
  
     # Handle lists
     elif isinstance(le_old, list) and isinstance(le_new, list):
@@ -464,8 +464,9 @@ def execute(target_folder_x, lower_env, higher_env, repo_url):
                     print(filename)
                     file_path = os.path.join(release_note_path, filename)
                     print("This is the file path for db-scripts: ",file_path)
+                    pythonexec=os.getenv("PYTHON_EXEC", "python3.11")
                     result = subprocess.run(
-                        ["python3.12", sys.argv[6] ,repo_url, lower_env, higher_env,file_path],
+                        [pythonexec, sys.argv[6] ,repo_url, lower_env, higher_env,file_path],
                         check=True,
                         capture_output=True,
                         text=True
@@ -480,41 +481,60 @@ def execute(target_folder_x, lower_env, higher_env, repo_url):
         print("STDOUT:", e.stdout)
         print("STDERR:", e.stderr)
  
-def create_upgrade_services_txt(excel_path, sheet_name, repo_root):
-    # Path to the output file in the root of the repo
+
+
+def create_upgrade_services_txt(excel_path, sheet_name, repo_root, lower_env):
     txt_path = os.path.join(repo_root, 'upgrade-services.txt')
- 
-    # Delete the file if it already exists
+
     if os.path.exists(txt_path):
         os.remove(txt_path)
- 
-    excel_folder = os.listdir(excel_path)
-    for i in excel_folder:
+
+    # Identify the correct .xlsx file
+    file_path = None
+    for i in os.listdir(excel_path):
         if i.endswith(".xlsx"):
-            file_path = os.path.join(excel_path,i)
- 
+            file_path = os.path.join(excel_path, i)
+            break
+
+    if not file_path:
+        raise FileNotFoundError("No Excel file found in the given path.")
+
     wb = load_workbook(file_path)
     ws = wb[sheet_name]
- 
-    # Find column indices by header names
+
     headers = [cell.value for cell in ws[1]]
     try:
         key_col = headers.index('Key') + 1
         service_name_col = headers.index('Service name') + 1
-        value_col = headers.index(f'{sheet_name}-current value') + 1
+        value_col = headers.index(f'{lower_env}-current value') + 1
+        comment_col = headers.index(f'Comment') + 1
     except ValueError as e:
         raise ValueError(f"Required column missing: {e}")
- 
+
     with open(txt_path, 'w') as file:
         for row in ws.iter_rows(min_row=2):
             key_cell = row[key_col - 1].value
-            if (key_cell and 'image//tag' in str(key_cell)) or (key_cell and 'image//image_name' in str(key_cell)):
-                print(key_cell)
-                service_name = row[service_name_col - 1].value
-                value = row[value_col - 1].value
-                if service_name is not None and value is not None:
+            service_name = row[service_name_col - 1].value
+            value = row[value_col - 1].value
+            comment = row[comment_col - 1].value
+
+            if key_cell and ('image//tag' in str(key_cell) or 'image//image_name' in str(key_cell)):
+                if service_name and value:
                     file.write(f"{service_name}:{value}\n")
-                    print(f"fileeenameee:: {service_name}:{value}\n")
+                    print(f"{service_name}:{value}")
+            elif comment and comment.strip().lower() == "root object added":
+                if value:
+                    try:
+                        parsed = json.loads(value)
+                        tag = parsed.get("image", {}).get("tag")
+                        if service_name and tag:
+                            file.write(f"{service_name}:{tag}\n")
+                            print(f"{service_name}:{tag}")
+                    except json.JSONDecodeError as e:
+                        print(f"Failed to parse JSON for service {service_name}: {e}")
+                else:
+                    print(f"Value is None for service {service_name} with 'root object added'")
+
  
 def main():
     repos_info = {
@@ -629,7 +649,7 @@ def main():
     result = execute(target_folder_x, envs[0],envs[1], repo_url)
     print("The result is: ", result)
  
-    create_upgrade_services_txt(release_note_path, envs[1], target_folder_x)
+    create_upgrade_services_txt(release_note_path, envs[1], target_folder_x, envs[0])
     try:
         subprocess.run(['git', 'add', "."], cwd =target_folder_x, check=True, capture_output=True, text=True)
         status_result = subprocess.run(['git', 'status'], cwd =target_folder_x, check=True, capture_output=True, text=True)
