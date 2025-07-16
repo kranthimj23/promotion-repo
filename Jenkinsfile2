@@ -2,17 +2,15 @@
 //1) Checks if the release-note is updated based on the commit history.
 //2) If the release-note is updated, then generate the config.
 
-
 pipeline {
 
-    agent any // add the label
+    agent any 
  
     environment {
         PYTHON_EXEC = 'python3.11'  // Or adjust to 'python' if needed
         GIT_CREDENTIALS_ID = credentials('jenkins-token')
     }
 
- 
     // Declare executePython at pipeline level to share across stages
 
     // Use a script block to initialize it
@@ -86,26 +84,38 @@ pipeline {
             steps {
                 script {
                     if (executePython) {
-                        configFileProvider([configFile(fileId: 'generate-config', targetLocation: 'generate-config.py'), configFile(fileId: 'drift_promotion', targetLocation: 'drift_promotion.py')]) {
-                            withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
-                                
-                                //def result_infra = sh(
-                                //script: "${env.PYTHON_EXEC} drift_promotion.py ${env.github_url} ${env.promotion_branch} ${env.higher_env}",
-                                //returnStdout: true
-                                //).trim()
-                                //echo result_infra
-
+                        configFileProvider([
+                            configFile(fileId: 'generate-config', targetLocation: 'generate-config.py'),
+                            configFile(fileId: 'drift_promotion', targetLocation: 'drift_promotion.py')
+                        ]) {
+                            withCredentials([
+                                string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')
+                            ]) {
+                                def targetFile = "${WORKSPACE}/promotion-repo/helm-charts/${env.higher_env}-values/${env.higher_env}.txt"
+        
+                                if (fileExists(targetFile)) {
+                                    echo "File exists: ${targetFile}"
+                                    
+                                    // ✅ Trigger another pipeline (corrected syntax)
+                                    build job: 'ansible_sparse_execution_cd',
+                                        parameters: [
+                                            string(name: 'higher_env', value: env.higher_env),
+                                            string(name: 'promotion_branch_x', value: env.promotion_branch)
+                                        ],
+                                        wait: false
+                                } else {
+                                    echo "File does NOT exist: ${targetFile}"
+                                }
+        
+                                // ✅ Now run the generate-config script
                                 def result = sh(
-                                script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch} ${env.lower_env} ${env.higher_env}",
-                                returnStdout: true
+                                    script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch} ${env.lower_env} ${env.higher_env}",
+                                    returnStdout: true
                                 ).trim()
                                 echo result
                             }
-                           
-                            }
                         }
-
-                    else {
+                    } else {
                         echo "No matching commit messages found. Skipping Python script execution."
                         error("No matching commit message found.")
                     }
