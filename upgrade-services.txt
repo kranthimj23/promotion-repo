@@ -1,0 +1,3 @@
+service-admin:6-dev
+service-auth:5-dev
+service-user:33-dev
