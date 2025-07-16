@@ -1,0 +1,5 @@
+INSERT INTO sit.demo-set (PK, name, age, email, active) VALUES ('user1', 'May', 29, 'may@example.com', true)
+INSERT INTO sit.demo-set (PK, name, age, email, active) VALUES ('user2', 'June', 34, 'june@example.com', false)
+INSERT INTO sit.demo-set (PK, name, age, email, active) VALUES ('user3', 'July', 42, 'july@example.com', true)
+INSERT INTO sit.demo-set (PK, name, age, email, active) VALUES ('user4', 'Aug', 25, 'aug@example.com', true)
+INSERT INTO sit.demo-set (PK, name, age, email, active) VALUES ('user5', 'Sep', 31, 'sep@example.com', false)
