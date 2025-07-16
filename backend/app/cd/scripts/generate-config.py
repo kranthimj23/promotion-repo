@@ -496,7 +496,14 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
     repo_path = tempfile.mkdtemp()
  
     try:
-        # Clone the repository into the temp directory
+        github_token = os.getenv("GIT_TOKEN")
+        if github_token and "github.com" in repo_url:
+         # Inject token into repo URL (safe for HTTPS GitHub URLs)
+            if repo_url.startswith("https://"):
+                repo_url = repo_url.replace("https://", f"https://{github_token}@")
+            else:
+                raise ValueError("Unsupported repo_url format. Must start with https://")
+            # Clone the repository into the temp directory
         subprocess.run(['git', 'clone', repo_url, repo_path], check=True)
  
         # Checkout the master branch explicitly
@@ -510,13 +517,14 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
             raise ValueError(f"Branch {promote_branch} does not exist in repository")
  
         print("Step1")
-        print(os.path.dirname(repo_path))
+        
  
         # Process Excel file
         excel_path = os.path.join(repo_path, 'meta-sheet.xlsx')
         wb = load_workbook(excel_path)
         ws = wb.active
- 
+        if os.path.exists(excel_path):
+            print("path exists: ", excel_path)
         # Find column indices
         headers = [cell.value for cell in ws[1]]
         lower_col = headers.index(lower_env) + 1
@@ -526,35 +534,51 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
         updated = False
         for row in ws.iter_rows(min_row=2):  # Skip header
             if row[lower_col - 1].value == promote_branch:
-                row[higher_col - 1].value = promote_branch
+                if row[higher_col - 1].value == promote_branch:
+                    print("already updated")
+                else:
+                    row[higher_col - 1].value = promote_branch
                 updated = True
+                
                 break
         print("Step2")
         if not updated:
             raise ValueError(f"{promote_branch} not found in {lower_env} column")
  
         # Save changes
+        # Save changes
         wb.save(excel_path)
- 
+        print("saved excel file")
+
         # Commit and push changes to master branch
-        subprocess.run(['git', 'config', 'user.email', 'surabhi.h@hdfcbank.com'], cwd =repo_path ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', 'MGXR3734'], cwd =repo_path, check=True, timeout=30)
-        subprocess.run(['git', '-C', repo_path, 'add', 'meta-sheet.xlsx'], check=True)
+        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd=repo_path, check=True, capture_output=True, text=True)
+        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd=repo_path, check=True, capture_output=True, text=True)
+
+        print("Git add...")
+        subprocess.run(['git', '-C', repo_path, 'add', 'meta-sheet.xlsx'], check=True, capture_output=True, text=True)
+
+        print("Checking if there are changes to commit...")
+        status = subprocess.run(['git', '-C', repo_path, 'status', '--porcelain'], capture_output=True, text=True)
+        if not status.stdout.strip():
+            print("No changes to commit.")
+            return True
+
+        print("Git commit...")
         subprocess.run(['git', '-C', repo_path, 'commit', '-m',
-                        f'Promote {promote_branch} from {lower_env} to {higher_env}'], check=True)
-        subprocess.run(['git', '-C', repo_path, 'push', 'origin', 'master'], check=True)
- 
-        shutil.rmtree(repo_path, ignore_errors=True)
- 
-        return True
- 
+                        f'Promoted {promote_branch} from {lower_env} to {higher_env}'], check=True, capture_output=True, text=True)
+
+        print("Git push...")
+        subprocess.run(['git', '-C', repo_path, 'push', 'origin', 'master'], check=True, capture_output=True, text=True)
+
     except subprocess.CalledProcessError as e:
-        print(f"Git operation failed: {e.stderr}")
+        print(f"Git operation failed: {e}")
+        print(f"Return code: {e.returncode}")
+        print(f"Command: {e.cmd}")
+        print(f"Output: {e.output}")
+        print(f"Stderr: {e.stderr}")
         return False
- 
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return False
+
+
  
 def main():
  
@@ -605,8 +629,8 @@ def main():
             json_data = read_yaml_files_to_json(folder_path)
             save_json_to_file(json_data, initial_output_file)
             updated_json = apply_changes_to_json(json_data, excel_file_path, sheet, lower_env, higher_env)
-            insert_hardcoded_value(target_folder_x,update_template)
-            modify_deployment_yaml(target_folder_x,deleted_services)
+            #insert_hardcoded_value(target_folder_x,update_template)
+            #modify_deployment_yaml(target_folder_x,deleted_services)
             save_json_to_file(updated_json, updated_output_file)
             create_yaml_files_from_json(updated_output_file, output_folder)
             apply_sed_to_yaml(output_folder)
@@ -619,11 +643,11 @@ def main():
         print(status_result.stdout)
         print(status_result.stderr)
         # Pull latest changes with rebase to avoid non-fast-forward errors
-        subprocess.run(['git', 'config', 'user.email', 'surabhi.h@hdfcbank.com'], cwd =target_folder_x ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', 'MGXR3734'], cwd =target_folder_x, check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =target_folder_x ,check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd =target_folder_x, check=True, timeout=30)
         subprocess.run(['git', 'commit', '-m',
-                    f'Config files generated: {sys.argv[2]} '], cwd =target_folder_x, check=True, capture_output=True, text=True)
-        subprocess.run(['git', 'pull', '--rebase', 'origin', sys.argv[2]], cwd=target_folder_x, check=True, capture_output=True, text=True)
+                    f'Config files generated: {sys.argv[3]} '], cwd =target_folder_x, check=True, capture_output=True, text=True)
+        subprocess.run(['git', 'pull', '--rebase', 'origin', sys.argv[3]], cwd=target_folder_x, check=True, capture_output=True, text=True)
         print("Pulled latest changes successfully.")
  
         # Push changes
