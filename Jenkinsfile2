@@ -91,7 +91,7 @@ pipeline {
                             withCredentials([
                                 string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')
                             ]) {
-                                def targetFile = "${WORKSPACE}/promotion-repo/helm-charts/${env.higher_env}-values/${env.higher_env}.txt"
+                                def targetFile = "${WORKSPACE}/helm-charts/${env.higher_env}-values/db-scripts/AQL/${env.higher_env}.txt"
         
                                 if (fileExists(targetFile)) {
                                     echo "File exists: ${targetFile}"
