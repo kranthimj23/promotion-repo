@@ -1,0 +1,5 @@
+INSERT INTO dev.limits (PK, name, email, age, active) VALUES ('user1', 'Himanshu', 'himanshu@example.com', 29, true)
+
+INSERT INTO dev.limits (PK, name, email, age, active) VALUES ('user2', 'Anjali', 'anjali@example.com', 25, false)
+
+INSERT INTO dev.limits (PK, name, email, age, active) VALUES ('user3', 'Rahul', 'rahul@example.com', 31, true)
