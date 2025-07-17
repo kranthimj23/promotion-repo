@@ -1,0 +1,2 @@
+SELECT * FROM uat.users WHERE PK = 'user4';
+
