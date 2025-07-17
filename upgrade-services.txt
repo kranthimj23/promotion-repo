@@ -1,3 +1,3 @@
-service-admin:"7-dev"
-service-auth:"6-dev"
-service-user:"37-dev"
+service-admin:"8-dev"
+service-auth:"7-dev"
+service-user:"38-dev"
