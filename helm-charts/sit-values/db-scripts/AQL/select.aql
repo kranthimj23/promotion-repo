@@ -1,0 +1,3 @@
+SELECT * FROM sit.users WHERE PK = 'user1';
+SELECT * FROM sit.users WHERE PK = 'user2';
+
