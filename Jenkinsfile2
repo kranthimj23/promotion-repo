@@ -34,18 +34,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Debug Git Log') {
-            steps {
-                script {
-                    sh 'ls -lh helm-charts/sit-values/release_note/'
-                    sh 'git status'
-                    sh 'git log -n 5 --oneline'
-                    sh 'git log -n 10 --pretty=format:"%H|%s" -- helm-charts/sit-values/release_note/'
-                }
-            }
-        }
- 
  
         stage('Check commits in release_note') {
             steps {
