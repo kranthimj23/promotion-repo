@@ -38,7 +38,6 @@ pipeline {
         stage('Check commits in release_note') {
             steps {
                 script {
-                    import java.util.regex.Pattern
                     echo "Checking commits in folder: release_note"
                     def commits = sh(
                         script: "git log -n 10 --pretty=format:\"%H|%s\" -- helm-charts/sit-values/release_note/*.xlsx",
