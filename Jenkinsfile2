@@ -44,15 +44,12 @@ pipeline {
                         returnStdout: true
                     ).trim()
                     echo commits
- 
-                    def pattern = ~("Updated the release note in the branch: " + env.promotion_branch)
-                    // Use a pipeline variable to share state
-                    // Initialize executePython if not yet defined
 
-                    if (!binding.hasVariable('executePython')) {
-                        executePython = false
-                    }
- 
+                    // Use flexible space matching
+                    def pattern = ~/Updated the release note in the branch:\s+${Pattern.quote(env.promotion_branch)}*/
+
+                    def executePython = false  // Use def to avoid memory leak warnings
+
                     commits.split('\n').each { line ->
                         def parts = line.split('\\|', 2)
                         if (parts.length == 2) {
