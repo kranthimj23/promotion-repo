@@ -1,2 +1,0 @@
-insert.aql
-select.aql
