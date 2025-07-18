@@ -1,3 +1,3 @@
-service-admin:8-sit
-service-auth:7-sit
-service-user:38-sit
+service-admin:8-uat
+service-auth:7-uat
+service-user:38-uat
