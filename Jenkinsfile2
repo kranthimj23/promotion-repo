@@ -95,6 +95,13 @@ pipeline {
                                 } else {
                                     echo "File does NOT exist: ${targetFile}"
                                 }
+
+                                // ✅ Now run the generate-config script
+                                def result_infra = sh(
+                                    script: "${env.PYTHON_EXEC} drift_promotion.py ${env.github_url} ${env.promotion_branch} ${env.higher_env}",
+                                    returnStdout: true
+                                ).trim()
+                                echo result_infra
         
                                 // ✅ Now run the generate-config script
                                 def result = sh(
