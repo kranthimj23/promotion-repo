@@ -1,3 +1,2 @@
-service-admin:8-uat
-service-auth:7-uat
-service-user:38-uat
+service-admin:"10-dev"
+service-user:"40-dev"
