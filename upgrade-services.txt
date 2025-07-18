@@ -1,2 +1,2 @@
-service-admin:"10-mig"
-service-user:"40-mig"
+service-admin:"10-uat"
+service-user:"40-uat"
