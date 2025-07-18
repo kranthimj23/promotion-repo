@@ -1,2 +1,0 @@
-INSERT INTO dev.demo-set (PK, name, age, email, active) VALUES ('user11', 'Alice', 29, 'alice@example.com', true)
-INSERT INTO dev.demo-set (PK, name, age, email, active) VALUES ('user12', 'Bob', 34, 'bob@example.com', false)

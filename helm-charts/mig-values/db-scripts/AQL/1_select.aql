@@ -1,2 +1,0 @@
-SELECT * FROM mig.users WHERE PK = 'user4';
-
