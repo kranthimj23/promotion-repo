@@ -1,0 +1,3 @@
+INSERT INTO sit.orders (PK, order_id, user_id, product_id, status) VALUES ('o001', 'ORD123', 'u001', 'p001', 'shipped')
+INSERT INTO sit.orders (PK, order_id, user_id, product_id, status) VALUES ('o002', 'ORD124', 'u002', 'p003', 'pending')
+INSERT INTO sit.orders (PK, order_id, user_id, product_id, status) VALUES ('o003', 'ORD125', 'u001', 'p002', 'delivered')
