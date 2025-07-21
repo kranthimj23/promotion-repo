@@ -249,13 +249,7 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
                 print(f"Error: Key is missing or empty in row {row_num}.")
                 raise ValueError(f"Missing or empty key encountered in row {row_num}.")
  
-        # Check for missing or empty value
-        if he_cur is None or (isinstance(he_cur, str) and he_cur.strip() == ""):
-            if change_request == "delete":
-                continue
-            else:
-                raise ValueError(f"Missing or empty value encountered in row {row_num}.")
- 
+
         parsed_value = try_parse_json(he_cur)
  
         if service_name in ['data', 'env']:
@@ -288,8 +282,9 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
             elif change_request == 'delete':
                 if final_key in obj:
                     print(final_key, obj)
-                    obj[final_key] = [entry for entry in obj[final_key] if entry['name'] != parsed_value['name']]
                     print(f"Deleted entry from '{final_key}' in '{service_name}'.")
+                    obj[final_key] = [entry for entry in obj[final_key] if not (isinstance(entry, dict) and 'name' in entry and entry['name'] == parsed_value['name'])]
+
         else:
             if change_request == 'modify':
                 obj[final_key] = parsed_value
@@ -300,6 +295,14 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
             elif change_request == 'delete' and final_key in obj:
                 del obj[final_key]
                 print(f"Deleted '{final_key}' from '{service_name}'.")
+
+                # Check for missing or empty value
+        if he_cur is None or (isinstance(he_cur, str) and he_cur.strip() == ""):
+            if change_request == "delete":
+                continue
+            else:
+                raise ValueError(f"Missing or empty value encountered in row {row_num}.")
+ 
  
     return json_data
  
