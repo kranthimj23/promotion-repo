@@ -248,7 +248,8 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
             if k in le_new:
                 compare(le_old[k], le_new[k], root, changes, he_old[k], new_key_path)
             else:
-                changes.append((root, 'delete', new_key_path, '', json.dumps(le_old[k], indent=4), '', json.dumps(he_old[k], indent=4), 'Deleted'))
+                changes.append((root, 'delete', new_key_path, json.dumps(le_old[k], indent=4), json.dumps(le_old[k], indent=4), '', json.dumps(he_old[k], indent=4), 'Deleted'))
+
  
         for k in le_new.keys():
             new_key_path = f"{path}//{k}" if path else k
@@ -268,7 +269,7 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
                         if le_old_item != le_new[i]:
                             changes.append((root, 'modify', f"{path}", "["+json.dumps(le_new[i], indent=4)+"]", "["+json.dumps(le_old_item, indent=4)+"]",'',"["+json.dumps(he_old[i], indent=4)+"]",'Modified'))
                     else:
-                        changes.append((root, 'delete', f"{path}", '',json.dumps(le_old_item, indent=4), '',json.dumps(he_old[i], indent=4),'Deleted'))
+                        changes.append((root, 'delete', f"{path}", json.dumps(le_old_item, indent=4),json.dumps(le_old_item, indent=4), '',json.dumps(he_old[i], indent=4),'Deleted'))
  
  
                 # Add any new elements from the new list
@@ -291,13 +292,16 @@ def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, 
     for key, le_old_item in le_old_dict.items():
         if key in le_new_dict:
             le_new_item = le_new_dict[key]
-            he_old_item = he_old_dict[key]
             # If there are changes in the item
+            he_old_item = he_old_dict.get(key)
             if le_old_item != le_new_item:
-                changes.append((root, 'modify', path, json.dumps(le_new_item, indent=4), json.dumps(le_old_item, indent=4),'',json.dumps(he_old_item, indent=4), 'Modified'))
+                changes.append((root, 'modify', path, json.dumps(le_new_item, indent=4), json.dumps(le_old_item, indent=4), '', json.dumps(he_old_item, indent=4) if he_old_item else '', 'Modified'))
+                #changes.append((root, 'modify', path, json.dumps(le_new_item, indent=4), json.dumps(le_old_item, indent=4),'',json.dumps(he_old_item, indent=4), 'Modified'))
  
         else:
-            changes.append((root, 'delete', path, '' , json.dumps(le_old_item, indent=4),'',json.dumps(he_old_item, indent=4),'Deleted'))
+            changes.append((root, 'delete', path, json.dumps(le_old_item, indent=4), json.dumps(le_old_item, indent=4), '', json.dumps(he_old_dict.get(key), indent=4) if he_old_dict.get(key) else '', 'Deleted'))
+
+            #changes.append((root, 'delete', path, '' , json.dumps(le_old_item, indent=4),'',json.dumps(he_old_item, indent=4),'Deleted'))
  
  
     # Check for additions
