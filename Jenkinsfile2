@@ -21,7 +21,7 @@ pipeline {
                     withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                         checkout([
                             $class: 'GitSCM',
-                            branches: [[name: "*/${env.promotion_branch}"]],
+                            branches: [[name: "*/${env.promotion_branch_x}"]],
                             userRemoteConfigs: [[
                                 url: "${env.github_url}",
                                 credentialsId: env.GIT_CREDENTIALS_ID
@@ -42,7 +42,7 @@ pipeline {
                     ).trim()
                     echo commits
 
-                    def pattern = ~("Updated the release note in the branch:" + env.promotion_branch)
+                    def pattern = ~("Updated the release note in the branch:" + env.promotion_branch_x)
 
                     if (!binding.hasVariable('executePython')) {
                         executePython = false
@@ -90,7 +90,7 @@ pipeline {
                                     def downstreamBuild = build job: 'ansible_sparse_execution_cd',
                                         parameters: [
                                             string(name: 'higher_env', value: env.higher_env),
-                                            string(name: 'promotion_branch_x', value: env.promotion_branch)
+                                            string(name: 'promotion_branch_x', value: env.promotion_branch_x)
                                         ],
                                         wait: true,
                                         propagate: true
