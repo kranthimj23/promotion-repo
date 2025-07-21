@@ -207,15 +207,22 @@ def main():
     print(f"Updated terraform.tfvars saved to {target_autotfvars}")
     print(f'script path: {script_path}')
     print(f'tmpl path: {tmpl_path}')    
-    result = subprocess.run(
-                        ["python", script_path, target_file ,target_autotfvars, tmpl_path ],
-                        check=True,
-                        capture_output=True,
-                        text=True
-                    )
-    print(result.stdout)
-    print("auto.tfvars has been updated")
- 
+    
+    try:
+    
+        python_exec = os.getenv("PYTHON_EXEC", "python3.11")
+        result = subprocess.run(
+                            [python_exec, script_path, target_file ,target_autotfvars, tmpl_path ],
+                            check=True,
+                            capture_output=True,
+                            text=True
+                        )
+        print(result.stdout)
+        print("auto.tfvars has been updated")
+    except subprocess.CalledProcessError as e:
+        print("Error running the Python script:")
+        print(e.stderr)
+        sys.exit(1)
  
     try:
         subprocess.run(['git', 'add', "."], cwd =target_folder_x, check=True, capture_output=True, text=True)
