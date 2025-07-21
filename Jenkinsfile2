@@ -74,6 +74,13 @@ pipeline {
                             withCredentials([
                                 string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')
                             ]) {
+
+                                def result_infra = sh(
+                                    script: "${env.PYTHON_EXEC} drift_promotion.py ${env.github_url} ${env.promotion_branch} ${env.higher_env}",
+                                    returnStdout: true
+                                ).trim()
+                                echo result_infra
+
                                 def targetFile = "${WORKSPACE}/helm-charts/${env.higher_env}-values/db-scripts/AQL/${env.higher_env}.txt"
 
                                 if (fileExists(targetFile)) {
@@ -90,12 +97,6 @@ pipeline {
                                 } else {
                                     echo "File does NOT exist: ${targetFile}"
                                 }
-
-                                def result_infra = sh(
-                                    script: "${env.PYTHON_EXEC} drift_promotion.py ${env.github_url} ${env.promotion_branch} ${env.higher_env}",
-                                    returnStdout: true
-                                ).trim()
-                                echo result_infra
 
                                 def result = sh(
                                     script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch} ${env.lower_env} ${env.higher_env}",
