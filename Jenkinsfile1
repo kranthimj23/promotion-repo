@@ -78,7 +78,7 @@ pipeline {
                     steps {
                         script {
                             if (env.X1_BRANCH && env.X2_BRANCH) {
-                                configFileProvider([configFile(fileId: 'create-release-note', targetLocation: 'create-release-note.py'), configFile(fileId: 'database_scripts_merger', targetLocation: 'database_scripts_merger.py'), configFile(fileId: 'drift_lower_env', targetLocation: 'drift-lower-env.py')]) {
+                                configFileProvider([configFile(fileId: 'create-release-note', targetLocation: 'create-release-note.py'), configFile(fileId: 'database_scripts_merger', targetLocation: 'database_scripts_merger.py'), configFile(fileId: 'drift_lower_env', targetLocation: 'drift_lower_env.py')]) {
                                         withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                                         sh "${env.PYTHON_EXEC} drift_lower_env.py ${env.github_url} ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} "
                                         sh 'chmod +x database_scripts_merger.py'
