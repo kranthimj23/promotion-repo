@@ -192,13 +192,14 @@ def clone_repo(repo_url, branch_name, target_folder):
         print(f"Error creating folder '{target_folder}': {e}")
         return
     # Clone the specified branch into the target folder
-     github_token = os.getenv("GIT_TOKEN")
-     if github_token and "github.com" in repo_url:
-         # Inject token into repo URL (safe for HTTPS GitHub URLs)
-         if repo_url.startswith("https://"):
-             repo_url = repo_url.replace("https://", f"https://{github_token}@")
-         else:
-             raise ValueError("Unsupported repo_url format. Must start with https://")
+     
+    github_token = os.getenv("GIT_TOKEN")
+    if github_token and "github.com" in repo_url:
+        # Inject token into repo URL (safe for HTTPS GitHub URLs)
+        if repo_url.startswith("https://"):
+            repo_url = repo_url.replace("https://", f"https://{github_token}@")
+        else:
+            raise ValueError("Unsupported repo_url format. Must start with https://")
     try:
         subprocess.run(
             ["git", "clone", "--branch", branch_name, repo_url, target_folder],
@@ -331,8 +332,8 @@ def main():
         print("Error:", e.stderr)
         sys.exit(1)
 
-   shutil.rmtree(target_folder_x_1, ignore_errors=True)
-   shutil.rmtree(target_folder_x, ignore_errors=True)
+    shutil.rmtree(target_folder_x_1, ignore_errors=True)
+    shutil.rmtree(target_folder_x, ignore_errors=True)
  
 if __name__ == "__main__":
     main()
