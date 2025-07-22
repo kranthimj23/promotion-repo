@@ -1,5 +1,0 @@
-INSERT INTO sit.limits (PK, name, email, age, active) VALUES ('user1', 'Alice', 'alice@example.com', 29, true)
-
-INSERT INTO sit.limits (PK, name, email, age, active) VALUES ('user2', 'Bob', 'bob@example.com', 25, true)
-
-INSERT INTO sit.limits (PK, name, email, age, active) VALUES ('user3', 'Charlie', 'charlie@example.com', 31, true)

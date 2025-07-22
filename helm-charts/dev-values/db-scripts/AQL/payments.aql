@@ -1,3 +1,0 @@
-INSERT INTO dev.payments (PK, payment_id, user_id, amount, method, success) VALUES ('pay001', 'pay001', 'u001', 75000, 'credit_card', true)
-INSERT INTO dev.payments (PK, payment_id, user_id, amount, method, success) VALUES ('pay002', 'pay002', 'u002', 12000, 'upi', true)
-INSERT INTO dev.payments (PK, payment_id, user_id, amount, method, success) VALUES ('pay003', 'pay003', 'u003', 1500, 'net_banking', false)
