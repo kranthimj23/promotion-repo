@@ -1,0 +1,5 @@
+INSERT INTO sit.products (PK, product_id, name, description, price, stock_quantity) VALUES ('p001', 'PROD001', 'Laptop Pro X', 'High performance laptop with 16GB RAM', 1200.00, 50);
+INSERT INTO sit.products (PK, product_id, name, description, price, stock_quantity) VALUES ('p002', 'PROD002', 'Wireless Mouse', 'Ergonomic wireless mouse with long battery life', 25.50, 200);
+INSERT INTO sit.products (PK, product_id, name, description, price, stock_quantity) VALUES ('p003', 'PROD003', 'Mechanical Keyboard', 'RGB mechanical keyboard with clicky switches', 75.99, 100);
+INSERT INTO sit.products (PK, product_id, name, description, price, stock_quantity) VALUES ('p004', 'PROD004', 'USB-C Hub', 'Multi-port USB-C hub with HDMI and Ethernet', 49.00, 150);
+INSERT INTO sit.products (PK, product_id, name, description, price, stock_quantity) VALUES ('p005', 'PROD005', 'External SSD 1TB', 'Portable 1TB SSD for fast data transfer', 150.00, 75);
