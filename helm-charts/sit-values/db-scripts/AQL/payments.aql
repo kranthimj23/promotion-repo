@@ -1,0 +1,1 @@
+INSERT INTO sit.payments (PK, payment_id, user_id, amount, method, success) VALUES ('pay007', 'pay007', 'u007', 4999, 'credit_card', false)

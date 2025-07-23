@@ -1,0 +1,5 @@
+INSERT INTO sit.users (PK, user_id, username, email, created_at) VALUES ('u001', 'USR001', 'alice_smith', 'alice.smith@example.com', '2024-01-15T10:00:00Z');
+INSERT INTO sit.users (PK, user_id, username, email, created_at) VALUES ('u002', 'USR002', 'bob_johnson', 'bob.j@example.com', '2024-02-20T11:30:00Z');
+INSERT INTO sit.users (PK, user_id, username, email, created_at) VALUES ('u003', 'USR003', 'charlie_brown', 'charlieb@example.com', '2024-03-01T09:15:00Z');
+INSERT INTO sit.users (PK, user_id, username, email, created_at) VALUES ('u004', 'USR004', 'diana_prince', 'diana.p@example.com', '2024-04-10T14:00:00Z');
+INSERT INTO sit.users (PK, user_id, username, email, created_at) VALUES ('u005', 'USR005', 'eve_adams', 'eve.a@example.com', '2024-05-05T16:45:00Z');
