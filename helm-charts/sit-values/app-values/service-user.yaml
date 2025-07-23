@@ -13,7 +13,7 @@ env:
 image:
   pullPolicy: IfNotPresent
   repository: asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-user/user
-  tag: 48-dev
+  tag: 48-sit
 replicaCount: 1
 resources:
   limits:
