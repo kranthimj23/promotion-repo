@@ -581,7 +581,49 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
         print(f"Stderr: {e.stderr}")
         return False
 
+def fetch_branches(repo_url, lower_env, higher_env):
+ 
+    def find_column_index(sheet, env_name):
+        for col in range(1, sheet.max_column + 1):
+            if sheet.cell(row=1, column=col).value == env_name:
+                return col
+        raise ValueError(f"Environment '{env_name}' not found in header")
+ 
+    def find_last_updated_branch(sheet, col_idx):
+        for row in range(sheet.max_row, 1, -1):
+            val = sheet.cell(row=row, column=col_idx).value
+            if val is not None and val != 'X':
+                return val, row
+        raise ValueError(f"No branch found in column index {col_idx}")
+ 
+    github_token = os.getenv("GIT_TOKEN")
+    if github_token and "github.com" in repo_url:
+        if repo_url.startswith("https://"):
+            repo_url = repo_url.replace("https://", f"https://{github_token}@")
+        else:
+            raise ValueError("Unsupported repo_url format. Must start with https://")
+ 
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        # Use subprocess to run 'git clone'
+        clone_cmd = ['git', 'clone', '--branch', 'master', '--depth', '1', repo_url, tmpdirname]
+        result = subprocess.run(clone_cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"Git clone failed: {result.stderr.strip()}")
+ 
+        file_path = os.path.join(tmpdirname, 'meta-sheet.xlsx')
+        wb = load_workbook(file_path)
+        sheet = wb.active
+ 
+        lower_col = find_column_index(sheet, lower_env)
+        higher_col = find_column_index(sheet, higher_env)
+ 
+        lower_branch, _ = find_last_updated_branch(sheet, lower_col)
+        higher_branch, _ = find_last_updated_branch(sheet, higher_col)
 
+        shutil.rmtree(tmpdirname)
+ 
+    return lower_branch, higher_branch
+ 
  
 def main():
  
@@ -589,13 +631,20 @@ def main():
         'promotion-repo': sys.argv[1]
     }
  
+    lower_env = sys.argv[4]
+    higher_env = sys.argv[5]
+ 
+    # promote_branch_x, promote_branch_x_1 = fetch_branches(sys.argv[1],lower_env, higher_env)
+ 
+ 
+ 
     for repo_name, repo_url in repos_info.items():
         promote_branch_x_1 = sys.argv[2]
         promote_branch_x = sys.argv[3]
         
         target_folder_x_1 = os.path.join(os.getcwd(), "generate-config", "promotion-x-1", f"{repo_name}")
         target_folder_x = os.path.join(os.getcwd(), "generate-config", "promotion-x", f"{repo_name}")
-
+ 
     clone_repo(repo_url, promote_branch_x_1, target_folder_x_1)
     clone_repo(repo_url, promote_branch_x, target_folder_x)
  
