@@ -66,6 +66,8 @@ pipeline {
         stage('Run Python scripts') {
             steps {
                 script {
+                    executePython = true
+                    if (executePython) {
                         configFileProvider([
                             configFile(fileId: 'generate-config', targetLocation: 'generate-config.py'),
                             configFile(fileId: 'drift_promotion', targetLocation: 'drift_promotion.py')
@@ -79,30 +81,30 @@ pipeline {
                                     returnStdout: true
                                 ).trim()
                                 echo result_infra
-                                if (executePython) {
-                                    def targetFile = "${WORKSPACE}/helm-charts/${env.higher_env}-values/db-scripts/AQL/${env.higher_env}.txt"
 
-                                    if (fileExists(targetFile)) {
-                                        echo "File exists: ${targetFile}"
+                                def targetFile = "${WORKSPACE}/helm-charts/${env.higher_env}-values/db-scripts/AQL/${env.higher_env}.txt"
 
-                                        // ✅ Wait for downstream job and fail if it fails
-                                        def downstreamBuild = build job: 'ansible_sparse_execution_cd',
-                                            parameters: [
-                                                string(name: 'higher_env', value: env.higher_env),
-                                                string(name: 'promotion_branch_x', value: env.promotion_branch_x)
-                                            ],
-                                            wait: true,
-                                            propagate: true
-                                    } else {
-                                        echo "File does NOT exist: ${targetFile}"
-                                    }
+                                if (fileExists(targetFile)) {
+                                    echo "File exists: ${targetFile}"
 
-                                    def result = sh(
-                                        script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch_x} ${env.lower_env} ${env.higher_env}",
-                                        returnStdout: true
-                                    ).trim()
-                                    echo result
+                                    // ✅ Wait for downstream job and fail if it fails
+                                    def downstreamBuild = build job: 'ansible_sparse_execution_cd',
+                                        parameters: [
+                                            string(name: 'higher_env', value: env.higher_env),
+                                            string(name: 'promotion_branch_x', value: env.promotion_branch_x)
+                                        ],
+                                        wait: true,
+                                        propagate: true
+                                } else {
+                                    echo "File does NOT exist: ${targetFile}"
                                 }
+
+                                def result = sh(
+                                    script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch_x} ${env.lower_env} ${env.higher_env}",
+                                    returnStdout: true
+                                ).trim()
+                                echo result
+                            }
                         }
                     } else {
                         echo "No matching commit messages found. Skipping Python script execution."
