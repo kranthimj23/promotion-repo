@@ -467,17 +467,29 @@ def execute(target_folder_x, lower_env, higher_env, repo_url):
                 if filename.endswith('.xlsx'):
                     print(filename)
                     file_path = os.path.join(release_note_path, filename)
-                    print("This is the file path for db-scripts: ",file_path)
-                    pythonexec=os.getenv("PYTHON_EXEC", "python3.11")
-                    result = subprocess.run(
-                        [pythonexec, sys.argv[6] ,repo_url, lower_env, higher_env,file_path],
-                        check=True,
-                        capture_output=True,
-                        text=True
-                    )
-                    return result.stdout
+                    if os.path.exists(file_path):
+                        print("This is the file path for db-scripts: ",file_path)
                 else:
-                    print("Excel file not found")
+                    # Constant part of the filename
+                    base_filename = "release-note"
+                    # Get the current date and time
+                    now = datetime.datetime.now()
+                    # Format the date and time as a string
+                    date_time_str = now.strftime("%d-%b-%Y-%H-%M-%S")
+                    # Create the complete filename
+                    excel_file = f"{base_filename}-{date_time_str}.xlsx"
+                    file_path = os.path.join(release_note_path, excel_file)
+                    print(file_path)
+
+                pythonexec=os.getenv("PYTHON_EXEC", "python3.11")
+                result = subprocess.run(
+                    [pythonexec, sys.argv[6] ,repo_url, lower_env, higher_env,file_path],
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+                return result.stdout
+
  
  
     except subprocess.CalledProcessError as e:
@@ -485,7 +497,6 @@ def execute(target_folder_x, lower_env, higher_env, repo_url):
         print("STDOUT:", e.stdout)
         print("STDERR:", e.stderr)
  
-
 
 def create_upgrade_services_txt(excel_path, sheet_name, repo_root, lower_env):
     txt_path = os.path.join(repo_root, 'upgrade-services.txt')
@@ -501,43 +512,46 @@ def create_upgrade_services_txt(excel_path, sheet_name, repo_root, lower_env):
             break
 
     if not file_path:
-        raise FileNotFoundError("No Excel file found in the given path.")
+        print("No Excel file found in the given path.")
+    else:
+        wb = load_workbook(file_path)
+        
+        if sheet_name not in wb.sheetnames:
+            print("Application release note does not exist")
+        else:
+            ws = wb[sheet_name]
+            headers = [cell.value for cell in ws[1]]
+            try:
+                key_col = headers.index('Key') + 1
+                service_name_col = headers.index('Service name') + 1
+                value_col = headers.index(f'{lower_env}-current value') + 1
+                comment_col = headers.index(f'Comment') + 1
+            except ValueError as e:
+                raise ValueError(f"Required column missing: {e}")
 
-    wb = load_workbook(file_path)
-    ws = wb[sheet_name]
+            with open(txt_path, 'w') as file:
+                for row in ws.iter_rows(min_row=2):
+                    key_cell = row[key_col - 1].value
+                    service_name = row[service_name_col - 1].value
+                    value = row[value_col - 1].value
+                    comment = row[comment_col - 1].value
 
-    headers = [cell.value for cell in ws[1]]
-    try:
-        key_col = headers.index('Key') + 1
-        service_name_col = headers.index('Service name') + 1
-        value_col = headers.index(f'{lower_env}-current value') + 1
-        comment_col = headers.index(f'Comment') + 1
-    except ValueError as e:
-        raise ValueError(f"Required column missing: {e}")
-
-    with open(txt_path, 'w') as file:
-        for row in ws.iter_rows(min_row=2):
-            key_cell = row[key_col - 1].value
-            service_name = row[service_name_col - 1].value
-            value = row[value_col - 1].value
-            comment = row[comment_col - 1].value
-
-            if key_cell and ('image//tag' in str(key_cell) or 'image//image_name' in str(key_cell)):
-                if service_name and value:
-                    file.write(f"{service_name}:{value}\n")
-                    print(f"{service_name}:{value}")
-            elif comment and comment.strip().lower() == "root object added":
-                if value:
-                    try:
-                        parsed = json.loads(value)
-                        tag = parsed.get("image", {}).get("tag")
-                        if service_name and tag:
-                            file.write(f"{service_name}:{tag}\n")
-                            print(f"{service_name}:{tag}")
-                    except json.JSONDecodeError as e:
-                        print(f"Failed to parse JSON for service {service_name}: {e}")
-                else:
-                    print(f"Value is None for service {service_name} with 'root object added'")
+                    if key_cell and ('image//tag' in str(key_cell) or 'image//image_name' in str(key_cell)):
+                        if service_name and value:
+                            file.write(f"{service_name}:{value}\n")
+                            print(f"{service_name}:{value}")
+                    elif comment and comment.strip().lower() == "root object added":
+                        if value:
+                            try:
+                                parsed = json.loads(value)
+                                tag = parsed.get("image", {}).get("tag")
+                                if service_name and tag:
+                                    file.write(f"{service_name}:{tag}\n")
+                                    print(f"{service_name}:{tag}")
+                            except json.JSONDecodeError as e:
+                                print(f"Failed to parse JSON for service {service_name}: {e}")
+                        else:
+                            print(f"Value is None for service {service_name} with 'root object added'")
 
  
 def main():
