@@ -1,0 +1,4 @@
+INSERT INTO sit.product_reviews (PK, review_id, product_id, user_id, rating, comment, review_date) VALUES ('r001', 'REV001', 'p001', 'u001', 5, 'Absolutely love this laptop, super fast!', '2024-06-01T09:00:00Z');
+INSERT INTO sit.product_reviews (PK, review_id, product_id, user_id, rating, comment, review_date) VALUES ('r002', 'REV002', 'p002', 'u002', 4, 'Good mouse for the price, comfortable.', '2024-06-05T14:30:00Z');
+INSERT INTO sit.product_reviews (PK, review_id, product_id, user_id, rating, comment, review_date) VALUES ('r003', 'REV003', 'p001', 'u003', 4, 'Great laptop, but the battery life could be better.', '2024-06-10T11:00:00Z');
+INSERT INTO sit.product_reviews (PK, review_id, product_id, user_id, rating, comment, review_date) VALUES ('r004', 'REV004', 'p003', 'u001', 5, 'Typing on this keyboard is a dream!', '2024-06-15T16:00:00Z');
