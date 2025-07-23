@@ -1,4 +1,4 @@
-project_id   = "nice-virtue-463917-m0"
+project_id   = "zdt-sit"
 region       = "asia-south1"
 zone       = "asia-south1-a"
 cluster_name = "demo-gke-cluster"
