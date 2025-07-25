@@ -1,3 +1,0 @@
-cart_items.aql
-payments.aql
-product_reviews.aql
