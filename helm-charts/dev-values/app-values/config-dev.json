@@ -21,8 +21,9 @@
             ]
         },
         "image": {
+            "imageName": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-admin/admin:14-dev",
             "pullPolicy": "IfNotPresent",
-            "repository": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-admin/admin:6.3.0-b14-release-r7.0.0-v1",
+            "repository": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-admin/admin",
             "tag": "14-dev"
         },
         "replicaCount": 1,
@@ -56,8 +57,9 @@
             ]
         },
         "image": {
+            "imageName": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-auth/auth:12-dev",
             "pullPolicy": "IfNotPresent",
-            "repository": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-auth/auth:6.3.0-b12-release-r6.0.0-v1",
+            "repository": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-auth/auth",
             "tag": "12-dev"
         },
         "replicaCount": 1,
@@ -103,8 +105,9 @@
             ]
         },
         "image": {
+            "imageName": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-user/user:48-dev",
             "pullPolicy": "IfNotPresent",
-            "repository": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-user/user:6.3.0-b48-release-r7.0.0-v1",
+            "repository": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-user/user",
             "tag": "48-dev"
         },
         "replicaCount": 1,
