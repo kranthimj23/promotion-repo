@@ -6,7 +6,7 @@ env:
     value: himanshu
 image:
   pullPolicy: IfNotPresent
-  repository: asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-auth/auth
+  repository: asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-auth/auth:6.3.0-b12-release-r6.0.0-v1
   tag: 12-dev
 replicaCount: 1
 resources:
