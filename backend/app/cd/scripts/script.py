@@ -10,9 +10,10 @@ import shutil
 import datetime
 from openpyxl.utils import get_column_letter
 import tempfile
+import re
 
 envs = []
- 
+
 def clone_repo(repo_url, branch_name, target_folder):
     try:
         if os.path.exists(target_folder):
@@ -228,20 +229,11 @@ def yaml_to_json(folder_path):
     return json_data
 
 
-def dump_and_replace(json_obj, search=envs[0], replace=envs[1]):
+
+def dump_and_replace(json_obj, lower_env, higher_env):
     json_str = json.dumps(json_obj, indent=4)
-
-    with tempfile.NamedTemporaryFile(mode='w+', delete=False) as tmp_file:
-        tmp_file.write(json_str)
-        tmp_file_path = tmp_file.name
-
-    sed_cmd = f"sed 's/{search}/{replace}/g' {tmp_file_path}"
-    result = subprocess.run(sed_cmd, shell=True, capture_output=True, text=True)
-
-    if result.returncode != 0:
-        raise RuntimeError(f"sed command failed: {result.stderr}")
-
-    return result.stdout
+    replaced_str = json_str.replace(lower_env, higher_env)
+    return replaced_str
 
 
  
@@ -251,14 +243,14 @@ def compare_json_files(le_old_data, le_new_data, he_old_data):
     # Check for changes in the JSON files
     for root in le_new_data.keys():
         if root not in le_old_data:
-            modified_json = dump_and_replace(le_new_data[root])
+            modified_json = dump_and_replace(le_new_data[root], lower_env=envs[0], higher_env=envs[1])
             changes.append((root, 'add', '', json.dumps(le_new_data[root], indent=4), '', modified_json, '', 'root object added'))
         else:
             compare(le_old_data[root], le_new_data[root], root, changes, he_old_data[root])
  
     for root in le_old_data.keys():
         if root not in le_new_data:
-            modified_json = dump_and_replace(le_old_data[root])
+            modified_json = dump_and_replace(le_old_data[root],lower_env=envs[0], higher_env=envs[1])
             changes.append((root, 'delete', '', '',json.dumps(le_old_data[root], indent=4), modified_json,'', 'root object deleted'))
  
     return changes
@@ -271,14 +263,14 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
             if k in le_new:
                 compare(le_old[k], le_new[k], root, changes, he_old[k], new_key_path)
             else:
-                modified_json = dump_and_replace(le_old[k])
+                modified_json = dump_and_replace(le_old[k], lower_env=envs[0], higher_env=envs[1])
                 changes.append((root, 'delete', new_key_path, json.dumps(le_old[k], indent=4), json.dumps(le_old[k], indent=4), modified_json, json.dumps(he_old[k], indent=4), 'Deleted'))
 
  
         for k in le_new.keys():
             new_key_path = f"{path}//{k}" if path else k
             if k not in le_old:
-                modified_json = dump_and_replace(le_new[k])
+                modified_json = dump_and_replace(le_new[k], lower_env=envs[0], higher_env=envs[1])
                 changes.append((root, 'add', new_key_path, json.dumps(le_new[k], indent=4), '',modified_json,'', 'Added'))
  
     # Handle lists
@@ -292,22 +284,22 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
                 for i, le_old_item in enumerate(le_old):
                     if i < len(le_new):
                         if le_old_item != le_new[i]:
-                            modified_json = dump_and_replace(le_new[i])
+                            modified_json = dump_and_replace(le_new[i], lower_env=envs[0], higher_env=envs[1])
                             changes.append((root, 'modify', f"{path}", "["+json.dumps(le_new[i], indent=4)+"]", "["+json.dumps(le_old_item, indent=4)+"]",  "["+modified_json+"]","["+json.dumps(he_old[i], indent=4)+"]",'Modified'))
                     else:
-                        modified_json = dump_and_replace(le_old_item)
+                        modified_json = dump_and_replace(le_old_item, lower_env=envs[0], higher_env=envs[1])
                         changes.append((root, 'delete', f"{path}", json.dumps(le_old_item, indent=4),json.dumps(le_old_item, indent=4), modified_json,json.dumps(he_old[i], indent=4),'Deleted'))
  
  
                 # Add any new elements from the new list
                 for i in range(len(le_old), len(le_new)):
-                    modified_json = dump_and_replace(le_new[i])
+                    modified_json = dump_and_replace(le_new[i], lower_env=envs[0], higher_env=envs[1])
                     changes.append((root, 'add', f"{path}", json.dumps(le_new[i], indent=4), '',modified_json,'', 'Added'))
  
     # Compare scalar values
     else:
         if le_old != le_new:
-            modified_json = dump_and_replace(le_new)
+            modified_json = dump_and_replace(le_new, lower_env=envs[0], higher_env=envs[1])
             changes.append((root, 'modify', path, json.dumps(le_new, indent=4), json.dumps(le_old, indent=4) ,modified_json,json.dumps(he_old, indent=4) ,'Modified'))
  
 def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, path=''):
@@ -324,12 +316,12 @@ def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, 
             # If there are changes in the item
             he_old_item = he_old_dict.get(key)
             if le_old_item != le_new_item:
-                modified_json = dump_and_replace(le_new_item)
+                modified_json = dump_and_replace(le_new_item, lower_env=envs[0], higher_env=envs[1])
                 changes.append((root, 'modify', path, json.dumps(le_new_item, indent=4), json.dumps(le_old_item, indent=4), modified_json, json.dumps(he_old_item, indent=4) if he_old_item else '', 'Modified'))
                 #changes.append((root, 'modify', path, json.dumps(le_new_item, indent=4), json.dumps(le_old_item, indent=4),'',json.dumps(he_old_item, indent=4), 'Modified'))
  
         else:
-            modified_json = dump_and_replace(le_old_item)
+            modified_json = dump_and_replace(le_old_item, lower_env=envs[0], higher_env=envs[1])
             changes.append((root, 'delete', path, json.dumps(le_old_item, indent=4), json.dumps(le_old_item, indent=4), '', json.dumps(he_old_dict.get(key), indent=4) if he_old_dict.get(key) else '', 'Deleted'))
 
             #changes.append((root, 'delete', path, '' , json.dumps(le_old_item, indent=4),'',json.dumps(he_old_item, indent=4),'Deleted'))
@@ -338,8 +330,35 @@ def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, 
     # Check for additions
     for key, new_item in le_new_dict.items():
         if key not in le_old_dict:
-            modified_json = dump_and_replace(new_item)
+            modified_json = dump_and_replace(new_item, lower_env=envs[0], higher_env=envs[1])
             changes.append((root, 'add', path, json.dumps(new_item, indent=4),'',modified_json,'','Added'))
+
+
+def update_image_tag(image_str, env_keyword):
+    match = re.match(r'(.+):(.+)', image_str)
+    if not match:
+        return image_str
+    image_repo, tag = match.groups()
+    tag_parts = tag.split('-')
+    if len(tag_parts) < 3:
+        return image_str
+    updated_tag = '-'.join(tag_parts[:2] + [env_keyword])
+    return f"{image_repo}:{updated_tag}"
+
+def update_image_repo_in_json_string(json_str, env_keyword):
+    try:
+        data = json.loads(json_str)
+    except json.JSONDecodeError:
+        return json_str  # return as-is if not a valid JSON
+
+    if isinstance(data, dict):
+        image_obj = data.get('image', {})
+        if isinstance(image_obj, dict) and 'image_name' in image_obj:
+            image_obj['image_name'] = update_image_tag(image_obj['image_name'], env_keyword)
+            data['image'] = image_obj
+            return json.dumps(data, indent=4)
+    
+    return json_str
  
  
 def write_changes_to_excel(changes, release_note_path, envs,env_list):
@@ -373,6 +392,14 @@ def write_changes_to_excel(changes, release_note_path, envs,env_list):
     for change in changes:
         print(change)
         service_name, change_type, key, le_cur, le_prev, he_cur, he_prev, comment = change
+
+        # 🔄 If key is image//repository, update he_cur with transformed tag
+        if key == 'image//image_name':
+            he_cur = update_image_tag(he_cur, envs[1])  # replace after 2nd hyphen
+
+        # 🧠 Scenario 2: Root object with embedded image.repository
+        elif isinstance(comment, str) and comment.strip().lower() == 'root object added':
+            he_cur = update_image_repo_in_json_string(he_cur, envs[1])
  
         # Check if value exceeds 32,767 characters
         if len(le_cur) > 32767:
@@ -514,13 +541,14 @@ def execute(target_folder_x, lower_env, higher_env, repo_url):
                     print(file_path)
 
                 pythonexec=os.getenv("PYTHON_EXEC", "python3.11")
-                result = subprocess.run(
-                    [pythonexec, sys.argv[6] ,repo_url, lower_env, higher_env,file_path],
-                    check=True,
-                    capture_output=True,
-                    text=True
-                )
-                return result.stdout
+                # result = subprocess.run(
+                #     [pythonexec, sys.argv[6] ,repo_url, lower_env, higher_env,file_path],
+                #     check=True,
+                #     capture_output=True,
+                #     text=True
+                # )
+                result = True
+                return result
 
  
  
@@ -598,7 +626,7 @@ def main():
         promote_branch_x = sys.argv[2]
         target_folder_x_1 = os.path.join(os.getcwd(), "generate-config", "promotion-x-1", f"{repo_name}")
         target_folder_x = os.path.join(os.getcwd(), "generate-config", "promotion-x", f"{repo_name}")
-    envs = []
+    
     envs.append(sys.argv[3].strip())
     envs.append(sys.argv[4].strip())
     print("The list of envs is",envs)
