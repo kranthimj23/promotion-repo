@@ -1,1 +1,3 @@
-service-user:"48-dev"
+service-admin:14-dev
+service-auth:12-dev
+service-user:48-dev
