@@ -50,6 +50,7 @@ def update_helm_chart_temp(repo_url, image_repo, image_tag, ns, microservice):
 
         data['image']['repository'] = image_repo
         data['image']['tag'] = image_tag
+        data['image']['imageName'] = image_repo:image_tag
 
         with open(yaml_path, 'w') as f:
             yaml.safe_dump(data, f)
