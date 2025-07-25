@@ -1,0 +1,198 @@
+{
+    "data": [
+        {
+            "name": "dataKey1",
+            "value": "value1"
+        },
+        {
+            "name": "dataKey2",
+            "value": "value2"
+        },
+        {
+            "name": "dataKey3",
+            "value": "value3"
+        },
+        {
+            "name": "dataKey4",
+            "value": "value4"
+        },
+        {
+            "name": "dataKey5",
+            "value": "value5"
+        },
+        {
+            "name": "dataKey6",
+            "value": "value6"
+        },
+        {
+            "name": "dataKey7",
+            "value": "value7"
+        },
+        {
+            "name": "dataKey8",
+            "value": "value8"
+        }
+    ],
+    "env": [
+        {
+            "name": "key1",
+            "value": "value1"
+        },
+        {
+            "name": "key2",
+            "value": "value2"
+        },
+        {
+            "name": "key3",
+            "value": "value3"
+        },
+        {
+            "name": "key4",
+            "value": "value4"
+        },
+        {
+            "name": "key5",
+            "value": "value5"
+        },
+        {
+            "name": "key6",
+            "value": "value6"
+        },
+        {
+            "name": "key7",
+            "value": "value7"
+        },
+        {
+            "name": "key8",
+            "value": "value8"
+        }
+    ],
+    "service-admin": {
+        "env": {
+            "service_admin": [
+                {
+                    "name": "key1",
+                    "value": "value1"
+                },
+                {
+                    "name": "key2",
+                    "value": "value2"
+                },
+                {
+                    "name": "key3",
+                    "value": "value3"
+                },
+                {
+                    "name": "key4",
+                    "value": "value4"
+                }
+            ]
+        },
+        "image": {
+            "imageName": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-admin/admin:14-dev",
+            "pullPolicy": "IfNotPresent",
+            "repository": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-admin/admin:6.3.0-b14-release-r6.0.0-v1",
+            "tag": "14-dev"
+        },
+        "replicaCount": 1,
+        "resources": {
+            "limits": {
+                "cpu": "150m",
+                "memory": "512Mi"
+            },
+            "requests": {
+                "cpu": "200m",
+                "memory": "256Mi"
+            }
+        },
+        "service": {
+            "port": 8080,
+            "type": "ClusterIP"
+        },
+        "serviceName": "service-admin"
+    },
+    "service-auth": {
+        "env": {
+            "service_auth": [
+                {
+                    "name": "key2",
+                    "value": "value1"
+                },
+                {
+                    "name": "name",
+                    "value": "himanshu"
+                }
+            ]
+        },
+        "image": {
+            "imageName": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-auth/auth:12-dev",
+            "pullPolicy": "IfNotPresent",
+            "repository": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-auth/auth:6.3.0-b12-release-r7.0.0-v1",
+            "tag": "12-dev"
+        },
+        "replicaCount": 1,
+        "resources": {
+            "limits": {
+                "cpu": "100m",
+                "memory": "512Mi"
+            },
+            "requests": {
+                "cpu": "100m",
+                "memory": "256Mi"
+            }
+        },
+        "service": {
+            "port": 8080,
+            "type": "ClusterIP"
+        },
+        "serviceName": "service-auth"
+    },
+    "service-user": {
+        "env": {
+            "service_user": [
+                {
+                    "name": "key2",
+                    "value": "value2"
+                },
+                {
+                    "name": "key4",
+                    "value": "value4"
+                },
+                {
+                    "name": "key5",
+                    "value": "value5"
+                },
+                {
+                    "name": "name",
+                    "value": "man"
+                },
+                {
+                    "name": "name",
+                    "value": "himanshu"
+                }
+            ]
+        },
+        "image": {
+            "imageName": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-user/user:48-dev",
+            "pullPolicy": "IfNotPresent",
+            "repository": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-user/user:6.3.0-b48-release-r6.0.0-v1",
+            "tag": "48-dev"
+        },
+        "replicaCount": 1,
+        "resources": {
+            "limits": {
+                "cpu": "200m",
+                "memory": "256Mi"
+            },
+            "requests": {
+                "cpu": "200m",
+                "memory": "256Mi"
+            }
+        },
+        "service": {
+            "port": 8080,
+            "type": "ClusterIP"
+        },
+        "serviceName": "service-user"
+    }
+}
