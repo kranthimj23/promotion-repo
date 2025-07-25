@@ -90,9 +90,9 @@ pipeline {
                                     // ✅ Wait for downstream job and fail if it fails
                                     // def downstreamBuild = build job: 'ansible_sparse_execution_cd',
                                       //  parameters: [
-                                            string(name: 'higher_env', value: env.higher_env),
-                                            string(name: 'promotion_branch_x', value: env.promotion_branch_x)
-                                        ],
+                                         //   string(name: 'higher_env', value: env.higher_env),
+                                           // string(name: 'promotion_branch_x', value: env.promotion_branch_x)
+                                        //],
                                     //    wait: true,
                                   //      propagate: true
                                 //} else {
