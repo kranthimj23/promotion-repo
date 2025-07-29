@@ -600,10 +600,11 @@ def create_upgrade_services_txt(excel_path, sheet_name, repo_root, lower_env):
                         if service_name and value:
                             file.write(f"{service_name}:{value}\n")
                             print(f"{service_name}:{value}")
-                    elif comment and comment.strip().lower() == "root object added":
+                    elif comment and comment.strip().lower() == "root object added" and service_name not in ("data", "env"):
                         if value:
                             try:
                                 parsed = json.loads(value)
+                                print(parsed)
                                 tag = parsed.get("image", {}).get("tag")
                                 if service_name and tag:
                                     file.write(f"{service_name}:{tag}\n")
@@ -612,6 +613,8 @@ def create_upgrade_services_txt(excel_path, sheet_name, repo_root, lower_env):
                                 print(f"Failed to parse JSON for service {service_name}: {e}")
                         else:
                             print(f"Value is None for service {service_name} with 'root object added'")
+                    else:
+                        print(f"Skipping service {service_name}")
 
  
 def main():
