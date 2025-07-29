@@ -105,6 +105,11 @@ pipeline {
                                 echo result
 
                                 build job: 'deploy', wait: true
+                                parameters: [
+                                        string(name: 'env_namespace', value: env.higher_env),
+                                        string(name: 'latest_branch', value: env.promotion_branch_x)
+                                        string(name: 'repo_url', value: env.github_url)
+                                      ]
                             }
                         }
                     } else {
