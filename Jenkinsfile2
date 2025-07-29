@@ -66,7 +66,6 @@ pipeline {
         stage('Run Python scripts') {
             steps {
                 script {
-                    executePython = true
                     if (executePython) {
                         configFileProvider([
                             configFile(fileId: 'generate-config', targetLocation: 'generate-config.py'),
@@ -104,6 +103,8 @@ pipeline {
                                     returnStdout: true
                                 ).trim()
                                 echo result
+
+                                build job: 'deploy', wait: true
                             }
                         }
                     } else {
