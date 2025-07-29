@@ -81,9 +81,9 @@ pipeline {
                                 configFileProvider([configFile(fileId: 'create-release-note', targetLocation: 'create-release-note.py'), configFile(fileId: 'database_scripts_merger', targetLocation: 'database_scripts_merger.py'), configFile(fileId: 'drift_lower_env', targetLocation: 'drift_lower_env.py')]) {
                                         withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
                                         sh "${env.PYTHON_EXEC} drift_lower_env.py ${env.github_url} ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} "
-                                        // sh 'chmod +x database_scripts_merger.py'
-                                        // echo "create-release-note.py is getting executed with these parameters: ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url}"
-                                        // sh "${env.PYTHON_EXEC} create-release-note.py ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url} database_scripts_merger.py"
+                                        sh 'chmod +x database_scripts_merger.py'
+                                        echo "create-release-note.py is getting executed with these parameters: ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url}"
+                                        sh "${env.PYTHON_EXEC} create-release-note.py ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url} database_scripts_merger.py"
                                     }
                                 }
                             } else {
