@@ -21,13 +21,13 @@ def clone_repo(repo_url, branch_name, target_folder):
     except Exception as e:
         print(f"Error creating folder '{target_folder}': {e}")
         return
-    github_token = os.getenv("GIT_TOKEN")
-    if github_token and "github.com" in repo_url:
-         # Inject token into repo URL (safe for HTTPS GitHub URLs)
-        if repo_url.startswith("https://"):
-            repo_url = repo_url.replace("https://", f"https://{github_token}@")
-        else:
-            raise ValueError("Unsupported repo_url format. Must start with https://")
+    # github_token = os.getenv("GIT_TOKEN")
+    # if github_token and "github.com" in repo_url:
+    #      # Inject token into repo URL (safe for HTTPS GitHub URLs)
+    #     if repo_url.startswith("https://"):
+    #         repo_url = repo_url.replace("https://", f"https://{github_token}@")
+    #     else:
+    #         raise ValueError("Unsupported repo_url format. Must start with https://")
     # Clone the specified branch into the target folder
     try:
         subprocess.run(
@@ -41,16 +41,16 @@ def clone_repo(repo_url, branch_name, target_folder):
 def get_sheets_with_values(excel_file, env):
     wb = load_workbook(excel_file, data_only=True)
     matching_sheets = ''
-
+ 
     for sheet_name in wb.sheetnames:
         print("Checking sheet:", sheet_name)
-
+ 
         if sheet_name in ("dev2", "Summary", "AQL", "SQL"):
             print("Skipping the sheet: ", sheet_name)
-
+ 
         else:
             ws = wb[sheet_name]
-    
+ 
             # Find the column index of the "env-current value" header
             value_col_idx = None
             for cell in ws[1]:
@@ -58,22 +58,22 @@ def get_sheets_with_values(excel_file, env):
                     value_col_idx = cell.column  # 1-based index
                     print(f"Found column for '{env}-current value' in {sheet_name}: Column {value_col_idx}")
                     break
-    
+ 
             if value_col_idx is not None:
                 for row in ws.iter_rows(min_row=2, min_col=value_col_idx, max_col=value_col_idx):
                     cell_value = row[0].value
                     if cell_value is not None and str(cell_value).strip() != "":
                         matching_sheets = sheet_name
                         break  # No need to check further cells in this sheet
-
+ 
     if not matching_sheets:
         print("No values updated in any sheet for promotion.")
     else:
         print("Sheets with values:", matching_sheets)
-
+ 
     return matching_sheets
  
-
+ 
  
 def read_yaml_files_to_json(folder_path):
     json_data = {}
@@ -169,7 +169,7 @@ def insert_hardcoded_value(folder,service_list):
     with open(temp_path, 'w') as file:
         file.write(modified_text)
  
-    return modified_text 
+    return modified_text
  
  
  
@@ -249,7 +249,7 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
                 print(f"Error: Key is missing or empty in row {row_num}.")
                 raise ValueError(f"Missing or empty key encountered in row {row_num}.")
  
-
+ 
         parsed_value = try_parse_json(he_cur)
  
         if service_name in ['data', 'env']:
@@ -284,7 +284,7 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
                     print(final_key, obj)
                     print(f"Deleted entry from '{final_key}' in '{service_name}'.")
                     obj[final_key] = [entry for entry in obj[final_key] if not (isinstance(entry, dict) and 'name' in entry and entry['name'] == parsed_value['name'])]
-
+ 
         else:
             if change_request == 'modify':
                 obj[final_key] = parsed_value
@@ -295,7 +295,7 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
             elif change_request == 'delete' and final_key in obj:
                 del obj[final_key]
                 print(f"Deleted '{final_key}' from '{service_name}'.")
-
+ 
                 # Check for missing or empty value
         if he_cur is None or (isinstance(he_cur, str) and he_cur.strip() == ""):
             if change_request == "delete":
@@ -499,18 +499,18 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
     repo_path = tempfile.mkdtemp()
  
     try:
-        github_token = os.getenv("GIT_TOKEN")
-        if github_token and "github.com" in repo_url:
-         # Inject token into repo URL (safe for HTTPS GitHub URLs)
-            if repo_url.startswith("https://"):
-                repo_url = repo_url.replace("https://", f"https://{github_token}@")
-            else:
-                raise ValueError("Unsupported repo_url format. Must start with https://")
+        # github_token = os.getenv("GIT_TOKEN")
+        # if github_token and "github.com" in repo_url:
+        #  # Inject token into repo URL (safe for HTTPS GitHub URLs)
+        #     if repo_url.startswith("https://"):
+        #         repo_url = repo_url.replace("https://", f"https://{github_token}@")
+        #     else:
+        #         raise ValueError("Unsupported repo_url format. Must start with https://")
             # Clone the repository into the temp directory
         subprocess.run(['git', 'clone', repo_url, repo_path], check=True)
  
         # Checkout the master branch explicitly
-        subprocess.run(['git', '-C', repo_path, 'checkout', 'master'], check=True)
+        subprocess.run(['git', '-C', repo_path, 'checkout', 'promotion-meta'], check=True)
  
         # Verify branch exists in remote
         branch_check = subprocess.run(
@@ -520,7 +520,7 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
             raise ValueError(f"Branch {promote_branch} does not exist in repository")
  
         print("Step1")
-        
+ 
  
         # Process Excel file
         excel_path = os.path.join(repo_path, 'meta-sheet.xlsx')
@@ -542,7 +542,7 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
                 else:
                     row[higher_col - 1].value = promote_branch
                 updated = True
-                
+ 
                 break
         print("Step2")
         if not updated:
@@ -552,27 +552,27 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
         # Save changes
         wb.save(excel_path)
         print("saved excel file")
-
+ 
         # Commit and push changes to master branch
         subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd=repo_path, check=True, capture_output=True, text=True)
         subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd=repo_path, check=True, capture_output=True, text=True)
-
+ 
         print("Git add...")
         subprocess.run(['git', '-C', repo_path, 'add', 'meta-sheet.xlsx'], check=True, capture_output=True, text=True)
-
+ 
         print("Checking if there are changes to commit...")
         status = subprocess.run(['git', '-C', repo_path, 'status', '--porcelain'], capture_output=True, text=True)
         if not status.stdout.strip():
             print("No changes to commit.")
             return True
-
+ 
         print("Git commit...")
         subprocess.run(['git', '-C', repo_path, 'commit', '-m',
                         f'Promoted {promote_branch} from {lower_env} to {higher_env}'], check=True, capture_output=True, text=True)
-
+ 
         print("Git push...")
-        subprocess.run(['git', '-C', repo_path, 'push', 'origin', 'master'], check=True, capture_output=True, text=True)
-
+        subprocess.run(['git', '-C', repo_path, 'push', 'origin', 'promotion-meta'], check=True, capture_output=True, text=True)
+ 
     except subprocess.CalledProcessError as e:
         print(f"Git operation failed: {e}")
         print(f"Return code: {e.returncode}")
@@ -580,7 +580,7 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
         print(f"Output: {e.output}")
         print(f"Stderr: {e.stderr}")
         return False
-
+ 
 def fetch_branches(repo_url, lower_env, higher_env):
  
     def find_column_index(sheet, env_name):
@@ -596,16 +596,16 @@ def fetch_branches(repo_url, lower_env, higher_env):
                 return val, row
         raise ValueError(f"No branch found in column index {col_idx}")
  
-    github_token = os.getenv("GIT_TOKEN")
-    if github_token and "github.com" in repo_url:
-        if repo_url.startswith("https://"):
-            repo_url = repo_url.replace("https://", f"https://{github_token}@")
-        else:
-            raise ValueError("Unsupported repo_url format. Must start with https://")
+    # github_token = os.getenv("GIT_TOKEN")
+    # if github_token and "github.com" in repo_url:
+    #     if repo_url.startswith("https://"):
+    #         repo_url = repo_url.replace("https://", f"https://{github_token}@")
+    #     else:
+    #         raise ValueError("Unsupported repo_url format. Must start with https://")
  
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Use subprocess to run 'git clone'
-        clone_cmd = ['git', 'clone', '--branch', 'master', '--depth', '1', repo_url, tmpdirname]
+        clone_cmd = ['git', 'clone', '--branch', 'promotion-meta', '--depth', '1', repo_url, tmpdirname]
         result = subprocess.run(clone_cmd, capture_output=True, text=True)
         if result.returncode != 0:
             raise RuntimeError(f"Git clone failed: {result.stderr.strip()}")
@@ -619,7 +619,7 @@ def fetch_branches(repo_url, lower_env, higher_env):
  
         lower_branch, _ = find_last_updated_branch(sheet, lower_col)
         higher_branch, _ = find_last_updated_branch(sheet, higher_col)
-
+ 
         shutil.rmtree(tmpdirname)
  
     return lower_branch, higher_branch
@@ -628,7 +628,7 @@ def fetch_branches(repo_url, lower_env, higher_env):
 def main():
  
     repos_info = {
-        'promotion-repo': sys.argv[1]
+        'mb-helmcharts': sys.argv[1]
     }
  
     lower_env = sys.argv[4]
@@ -641,7 +641,7 @@ def main():
     for repo_name, repo_url in repos_info.items():
         promote_branch_x_1 = sys.argv[2]
         promote_branch_x = sys.argv[3]
-        
+ 
         target_folder_x_1 = os.path.join(os.getcwd(), "generate-config", "promotion-x-1", f"{repo_name}")
         target_folder_x = os.path.join(os.getcwd(), "generate-config", "promotion-x", f"{repo_name}")
  
@@ -651,9 +651,9 @@ def main():
     lower_env = sys.argv[4]
     higher_env = sys.argv[5]
  
-    release_note_path = os.path.join(target_folder_x, "helm-charts", f"{higher_env}-values", f"release_note")
+    release_note_path = os.path.join(target_folder_x, "helm-charts", f"{higher_env}-values", "app-values", f"release_note")
     print("Path is :: ", os.path.join(target_folder_x, "helm-charts", f"{higher_env}-values", f"release_note"))
-
+ 
     print("These are the values:", repo_url, promote_branch_x, lower_env, target_folder_x)
     foldernames = os.listdir(target_folder_x)
  
@@ -666,8 +666,8 @@ def main():
                     print("Excel file path: ", excel_file_path)
                 else:
                     print("Release note does not exist")
-
-         
+ 
+ 
             print("hiighherrr: ",higher_env)
             sheet = get_sheets_with_values(excel_file_path, higher_env)
             print(f"Promoting the values in env: {sheet} of {foldername}")
@@ -681,8 +681,8 @@ def main():
             json_data = read_yaml_files_to_json(folder_path)
             save_json_to_file(json_data, initial_output_file)
             updated_json = apply_changes_to_json(json_data, excel_file_path, sheet, lower_env, higher_env)
-            #insert_hardcoded_value(target_folder_x,update_template)
-            #modify_deployment_yaml(target_folder_x,deleted_services)
+            insert_hardcoded_value(target_folder_x,update_template)
+            modify_deployment_yaml(target_folder_x,deleted_services)
             save_json_to_file(updated_json, updated_output_file)
             create_yaml_files_from_json(updated_output_file, output_folder)
             apply_sed_to_yaml(output_folder)
@@ -723,4 +723,5 @@ def main():
  
 if __name__ == "__main__":
     main()
+ 
  
