@@ -21,13 +21,14 @@ def clone_repo(repo_url, branch_name, target_folder):
     except Exception as e:
         print(f"Error creating folder '{target_folder}': {e}")
         return
-    # github_token = os.getenv("GIT_TOKEN")
-    # if github_token and "github.com" in repo_url:
-    #      # Inject token into repo URL (safe for HTTPS GitHub URLs)
-    #     if repo_url.startswith("https://"):
-    #         repo_url = repo_url.replace("https://", f"https://{github_token}@")
-    #     else:
-    #         raise ValueError("Unsupported repo_url format. Must start with https://")
+    github_token = os.getenv("GIT_TOKEN")
+    if github_token and "github.com" in repo_url:
+         # Inject token into repo URL (safe for HTTPS GitHub URLs)
+        if repo_url.startswith("https://"):
+            repo_url = repo_url.replace("https://", f"https://{github_token}@")
+        else:
+            raise ValueError("Unsupported repo_url format. Must start with https://")
+    
     # Clone the specified branch into the target folder
     try:
         subprocess.run(
@@ -499,18 +500,19 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
     repo_path = tempfile.mkdtemp()
  
     try:
-        # github_token = os.getenv("GIT_TOKEN")
-        # if github_token and "github.com" in repo_url:
-        #  # Inject token into repo URL (safe for HTTPS GitHub URLs)
-        #     if repo_url.startswith("https://"):
-        #         repo_url = repo_url.replace("https://", f"https://{github_token}@")
-        #     else:
-        #         raise ValueError("Unsupported repo_url format. Must start with https://")
+        github_token = os.getenv("GIT_TOKEN")
+        if github_token and "github.com" in repo_url:
+         # Inject token into repo URL (safe for HTTPS GitHub URLs)
+            if repo_url.startswith("https://"):
+                repo_url = repo_url.replace("https://", f"https://{github_token}@")
+            else:
+                raise ValueError("Unsupported repo_url format. Must start with https://")
+            
             # Clone the repository into the temp directory
         subprocess.run(['git', 'clone', repo_url, repo_path], check=True)
  
         # Checkout the master branch explicitly
-        subprocess.run(['git', '-C', repo_path, 'checkout', 'promotion-meta'], check=True)
+        subprocess.run(['git', '-C', repo_path, 'checkout', 'master'], check=True)
  
         # Verify branch exists in remote
         branch_check = subprocess.run(
@@ -571,7 +573,7 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
                         f'Promoted {promote_branch} from {lower_env} to {higher_env}'], check=True, capture_output=True, text=True)
  
         print("Git push...")
-        subprocess.run(['git', '-C', repo_path, 'push', 'origin', 'promotion-meta'], check=True, capture_output=True, text=True)
+        subprocess.run(['git', '-C', repo_path, 'push', 'origin', 'master'], check=True, capture_output=True, text=True)
  
     except subprocess.CalledProcessError as e:
         print(f"Git operation failed: {e}")
@@ -596,16 +598,16 @@ def fetch_branches(repo_url, lower_env, higher_env):
                 return val, row
         raise ValueError(f"No branch found in column index {col_idx}")
  
-    # github_token = os.getenv("GIT_TOKEN")
-    # if github_token and "github.com" in repo_url:
-    #     if repo_url.startswith("https://"):
-    #         repo_url = repo_url.replace("https://", f"https://{github_token}@")
-    #     else:
-    #         raise ValueError("Unsupported repo_url format. Must start with https://")
+    github_token = os.getenv("GIT_TOKEN")
+    if github_token and "github.com" in repo_url:
+        if repo_url.startswith("https://"):
+            repo_url = repo_url.replace("https://", f"https://{github_token}@")
+        else:
+            raise ValueError("Unsupported repo_url format. Must start with https://")
  
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Use subprocess to run 'git clone'
-        clone_cmd = ['git', 'clone', '--branch', 'promotion-meta', '--depth', '1', repo_url, tmpdirname]
+        clone_cmd = ['git', 'clone', '--branch', 'master', '--depth', '1', repo_url, tmpdirname]
         result = subprocess.run(clone_cmd, capture_output=True, text=True)
         if result.returncode != 0:
             raise RuntimeError(f"Git clone failed: {result.stderr.strip()}")
@@ -723,5 +725,4 @@ def main():
  
 if __name__ == "__main__":
     main()
- 
  
