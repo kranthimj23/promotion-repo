@@ -9,6 +9,11 @@ from filecmp import cmp
 import shutil
 import datetime
 from openpyxl.utils import get_column_letter
+import tempfile
+import re
+ 
+ 
+envs = []
  
 def clone_repo(repo_url, branch_name, target_folder):
     try:
@@ -77,31 +82,45 @@ def copy_missing_yaml_files(higher_env_x_1, lower_env_x, lower_env, higher_env):
     if not os.path.exists(lower_env_x):
         print(f"Error: The folder {lower_env_x} does not exist.")
  
-def create_release_note_summary(files_path, release_note, input_sheet_name):
-    """
-    Finds YAML files in a specified path, lists service names in an Excel sheet,
-    adds a dropdown for status, and populates status based on another sheet.
-    """
- 
-    # Initialize excel_file variable
+def create_release_note_summary(files_path, target_folder_x, existing_release_note_dir,input_sheet_name):
+    print("Executing create release note.py")
+    # Find first Excel file in existing release note folder
     excel_file = None
- 
-    # Check if release_note directory exists and find the Excel file
-    if os.path.exists(release_note):
-        for i in os.listdir(release_note):
-            if i.endswith(".xlsx"):
-                excel_file = os.path.join(release_note, i)
-                break  # Exit loop once the first Excel file is found
+    if os.path.exists(existing_release_note_dir):
+        for f in os.listdir(existing_release_note_dir):
+            if f.endswith(".xlsx"):
+                excel_file = os.path.join(existing_release_note_dir, f)
+                break
  
     if not excel_file:
-        print("Excel sheet not found in the specified directory.")
-        return  # Exit the function if no Excel file is found
+        print("Excel sheet not found in the source release note directory.")
+        return
+ 
+    # Ensure new release note directory exists
+    if not os.path.exists(target_folder_x):
+        print("Path to summary sheet not specified")
+ 
+    # Compose the directory in which the file is to be copied
+    new_dir = os.path.join(target_folder_x, "helm-charts", f"{envs[1]}-values", "release_note")
+ 
+    # Create directory if it doesn't exist
+    os.makedirs(new_dir, exist_ok=True)
+ 
+    # Then, compose the full new Excel file path
+    new_excel_file = os.path.join(new_dir, "release-note-summary.xlsx")
+    # Copy original Excel file to this new location
+    try:
+        shutil.copy2(excel_file, new_excel_file)
+        print(f"Copied {excel_file} to {new_excel_file}")
+    except Exception as e:
+        print(f"Failed to copy Excel file: {e}")
+        return
+ 
+    # Continue with rest of your processing by loading new_excel_file...
+    wb = openpyxl.load_workbook(new_excel_file)
  
     # Get YAML files from the specified path
     yaml_files = [f for f in os.listdir(files_path) if f.endswith('.yaml') or f.endswith('.yml')]
- 
-    # Load the existing workbook or create a new one if needed
-    wb = openpyxl.load_workbook(excel_file)
  
     # Check if "Summary" sheet already exists; if so, remove it
     if "Summary" in wb.sheetnames:
@@ -111,14 +130,15 @@ def create_release_note_summary(files_path, release_note, input_sheet_name):
     summary_sheet = wb.create_sheet("Summary")
     summary_sheet.sheet_state = "visible"
  
-    # Add column headers
-    headers = ["Services", "Status", "Comments", "Owner"]
+    # Add column headers including new "Build Number" at third position
+    headers = ["Services", "Status", "Build Number", "Comments", "Owner"]
     summary_sheet.append(headers)
  
     # Add service names from YAML files
     for yaml_file in yaml_files:
         service_name = os.path.splitext(yaml_file)[0]  # Use file name (without extension) as service name
-        summary_sheet.append([service_name])
+        # Initialize row with empty values for Status, Build Number, Comments, Owner
+        summary_sheet.append([service_name, "", "", "", ""])
  
     # Add dropdown options to the "Status" column
     dropdown_options = ["Updated", "No modifications", "New service", "Deleted service"]
@@ -132,8 +152,7 @@ def create_release_note_summary(files_path, release_note, input_sheet_name):
  
     # Add the dropdown to all cells in the "Status" column (from row 2 onwards)
     for row in range(2, summary_sheet.max_row + 1):
-        col = 2  # "Status" column
-        cell = summary_sheet.cell(row=row, column=col)
+        cell = summary_sheet.cell(row=row, column=2)  # Status column
         dv.add(cell.coordinate)
  
     summary_sheet.add_data_validation(dv)
@@ -145,41 +164,114 @@ def create_release_note_summary(files_path, release_note, input_sheet_name):
         print(f"Sheet '{input_sheet_name}' not found in the Excel file.")
         return
  
-    # Iterate through service names in the Summary sheet
+    # Function to extract build number from image_name string
+    def extract_build_number(image_name_value):
+        # Example: format x.y.z-bpqr-qwertyu-0.0
+        # Goal: find substring starting with 'b' (like 'bpqr') and extract numeric portion (pqr)
+        # This regex captures the numeric part following 'b' in the dash-separated substring after the last hyphen
+        # but from your example, the number is after b in bpqr (where pqr is digits)
+        # We'll extract the substring starting with b and then digits after it (with some leniency)
+        # If digits can be anywhere after 'b', this regex helps extract first digits after b
+ 
+        # A more concrete approach:
+        # Find segment after first 'b' in the string where digits appear consecutively
+ 
+        match = re.search(r"-b(\d+)", image_name_value) # '-' followed by 'b' and digits
+        if match:
+            return match.group(1)  # return digits after 'b'
+        else:
+            # Alternatively, more relaxed pattern: find 'b' followed by digits anywhere
+            match = re.search(r"b(\d+)", image_name_value)
+            if match:
+                return match.group(1)
+        return ""  # Return empty string if no match
+ 
+    # Create a dictionary for comments to speed up lookup: {service_name: comment}
+    comments_dict = {}
+    for r in range(2, comments_sheet.max_row + 1):
+        svc_name = comments_sheet.cell(row=r, column=1).value
+        comment = comments_sheet.cell(row=r, column=comments_sheet.max_column).value  # Assuming last column has comment
+        if svc_name:
+            comments_dict[svc_name] = comment
+ 
+    # Iterate through rows in Summary sheet to update Status and Build Number
     for row in range(2, summary_sheet.max_row + 1):
         service_name = summary_sheet.cell(row=row, column=1).value
  
-        # Find matching service in the comments sheet
-        for comments_row in range(2, comments_sheet.max_row + 1):
-            if comments_sheet.cell(row=comments_row, column=1).value == service_name:
-                comment = comments_sheet.cell(row=comments_row, column=comments_sheet.max_column).value  # Assuming comments are in the last column
+        comment = comments_dict.get(service_name, None)
+        # Update status based on comment
+        status = "No modifications"
+        if comment == "root object added":
+            status = "New service"
+        elif comment == "root object deleted":
+            status = "Deleted service"
+        elif comment in ["Modified", "Added"]:
+            status = "Updated"
  
-                # Update status based on the comment
-                if comment == "root object added":
-                    summary_sheet.cell(row=row, column=2).value = "New service"
-                elif comment == "root object deleted":
-                    summary_sheet.cell(row=row, column=2).value = "Deleted service"
-                elif comment in ["Modified", "Added"]:
-                    summary_sheet.cell(row=row, column=2).value = "Updated"
-                break  # Exit loop if match found
+        summary_sheet.cell(row=row, column=2).value = status
+ 
+        # Build Number column is at column 3 (index 3)
+        build_number_cell = summary_sheet.cell(row=row, column=3)
+ 
+        # If status is Updated or New service, parse YAML and extract build number
+        if status in ["Updated", "New service"]:
+            # Compose full path to yaml file
+            yaml_file_path = os.path.join(files_path, f"{service_name}.yaml")
+            if not os.path.exists(yaml_file_path):
+                # Try .yml extension if .yaml does not exist
+                yaml_file_path = os.path.join(files_path, f"{service_name}.yml")
+ 
+            if os.path.exists(yaml_file_path):
+                try:
+                    with open(yaml_file_path, 'r') as yf:
+                        yaml_content = yaml.safe_load(yf)
+ 
+                    # Search for 'image_name' key anywhere in yaml (top level or nested)
+                    # If your structure is nested, you may need a recursive search
+                    def find_image_name(data):
+                        if isinstance(data, dict):
+                            for k, v in data.items():
+                                if k == "image_name":
+                                    return v
+                                else:
+                                    found = find_image_name(v)
+                                    if found:
+                                        return found
+                        elif isinstance(data, list):
+                            for item in data:
+                                found = find_image_name(item)
+                                if found:
+                                    return found
+                        return None
+ 
+                    image_name_val = find_image_name(yaml_content)
+                    if image_name_val:
+                        build_num = extract_build_number(str(image_name_val))
+                        build_number_cell.value = build_num
+                    else:
+                        build_number_cell.value = ""
+ 
+                except Exception as e:
+                    print(f"Failed to read/parse {yaml_file_path}: {e}")
+                    build_number_cell.value = ""
+            else:
+                build_number_cell.value = ""
         else:
-            # If no match found, set status to "No modifications"
-            summary_sheet.cell(row=row, column=2).value = "No modifications"
+            build_number_cell.value = ""
  
-    # Adjust column widths for better readability
-    for col in range(1, 5):  # Adjust columns A to D
+    # Adjust column widths for better readability (columns A to E now)
+    for col in range(1, 6):  # A=1 to E=5
         column_letter = get_column_letter(col)
         summary_sheet.column_dimensions[column_letter].width = 20
  
-    input_sheet_name = ''
     # Save the workbook with the updated Summary sheet
-    wb.save(excel_file)
+    wb.save(new_excel_file)
  
- 
-    wb = openpyxl.load_workbook(excel_file)
+    # Re-open and reorder sheets to put Summary first
+    wb = openpyxl.load_workbook(new_excel_file)
  
     if "Summary" in wb.sheetnames:
-        sheet = wb["Summary"]  # Corrected from wb.sheetname to wb["Summary"]
+        sheet = wb["Summary"]
  
         # Get the current index of the sheet
         current_index = wb._sheets.index(sheet)
@@ -191,7 +283,9 @@ def create_release_note_summary(files_path, release_note, input_sheet_name):
             # Insert the sheet at the beginning
             wb._sheets.insert(0, sheet)
  
-        wb.save(excel_file)
+        wb.save(new_excel_file)
+ 
+ 
  
 def fetch_json(target_folder, env):
     json_path = ''
@@ -224,19 +318,30 @@ def yaml_to_json(folder_path):
  
     return json_data
  
+ 
+ 
+def dump_and_replace(json_obj, lower_env, higher_env):
+    json_str = json.dumps(json_obj, indent=4)
+    replaced_str = json_str.replace(lower_env, higher_env)
+    return replaced_str
+ 
+ 
+ 
 def compare_json_files(le_old_data, le_new_data, he_old_data):
     changes = []
  
     # Check for changes in the JSON files
     for root in le_new_data.keys():
         if root not in le_old_data:
-            changes.append((root, 'add', '', json.dumps(le_new_data[root], indent=4), '', '', '', 'root object added'))
+            modified_json = dump_and_replace(le_new_data[root], lower_env=envs[0], higher_env=envs[1])
+            changes.append((root, 'add', '', json.dumps(le_new_data[root], indent=4), '', modified_json, '', 'root object added'))
         else:
             compare(le_old_data[root], le_new_data[root], root, changes, he_old_data[root])
  
     for root in le_old_data.keys():
         if root not in le_new_data:
-            changes.append((root, 'delete', '', '',json.dumps(le_old_data[root], indent=4), '','', 'root object deleted'))
+            modified_json = dump_and_replace(le_old_data[root],lower_env=envs[0], higher_env=envs[1])
+            changes.append((root, 'delete', '', '',json.dumps(le_old_data[root], indent=4), modified_json,'', 'root object deleted'))
  
     return changes
  
@@ -248,13 +353,15 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
             if k in le_new:
                 compare(le_old[k], le_new[k], root, changes, he_old[k], new_key_path)
             else:
-                changes.append((root, 'delete', new_key_path, json.dumps(le_old[k], indent=4), json.dumps(le_old[k], indent=4), '', json.dumps(he_old[k], indent=4), 'Deleted'))
-
+                modified_json = dump_and_replace(le_old[k], lower_env=envs[0], higher_env=envs[1])
+                changes.append((root, 'delete', new_key_path, json.dumps(le_old[k], indent=4), json.dumps(le_old[k], indent=4), modified_json, json.dumps(he_old[k], indent=4), 'Deleted'))
+ 
  
         for k in le_new.keys():
             new_key_path = f"{path}//{k}" if path else k
             if k not in le_old:
-                changes.append((root, 'add', new_key_path, json.dumps(le_new[k], indent=4), '','','', 'Added'))
+                modified_json = dump_and_replace(le_new[k], lower_env=envs[0], higher_env=envs[1])
+                changes.append((root, 'add', new_key_path, json.dumps(le_new[k], indent=4), '',modified_json,'', 'Added'))
  
     # Handle lists
     elif isinstance(le_old, list) and isinstance(le_new, list):
@@ -267,19 +374,23 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
                 for i, le_old_item in enumerate(le_old):
                     if i < len(le_new):
                         if le_old_item != le_new[i]:
-                            changes.append((root, 'modify', f"{path}", "["+json.dumps(le_new[i], indent=4)+"]", "["+json.dumps(le_old_item, indent=4)+"]",'',"["+json.dumps(he_old[i], indent=4)+"]",'Modified'))
+                            modified_json = dump_and_replace(le_new[i], lower_env=envs[0], higher_env=envs[1])
+                            changes.append((root, 'modify', f"{path}", "["+json.dumps(le_new[i], indent=4)+"]", "["+json.dumps(le_old_item, indent=4)+"]",  "["+modified_json+"]","["+json.dumps(he_old[i], indent=4)+"]",'Modified'))
                     else:
-                        changes.append((root, 'delete', f"{path}", json.dumps(le_old_item, indent=4),json.dumps(le_old_item, indent=4), '',json.dumps(he_old[i], indent=4),'Deleted'))
+                        modified_json = dump_and_replace(le_old_item, lower_env=envs[0], higher_env=envs[1])
+                        changes.append((root, 'delete', f"{path}", json.dumps(le_old_item, indent=4),json.dumps(le_old_item, indent=4), modified_json,json.dumps(he_old[i], indent=4),'Deleted'))
  
  
                 # Add any new elements from the new list
                 for i in range(len(le_old), len(le_new)):
-                    changes.append((root, 'add', f"{path}", json.dumps(le_new[i], indent=4), '','','', 'Added'))
+                    modified_json = dump_and_replace(le_new[i], lower_env=envs[0], higher_env=envs[1])
+                    changes.append((root, 'add', f"{path}", json.dumps(le_new[i], indent=4), '',modified_json,'', 'Added'))
  
     # Compare scalar values
     else:
         if le_old != le_new:
-            changes.append((root, 'modify', path, json.dumps(le_new, indent=4), json.dumps(le_old, indent=4) ,'',json.dumps(he_old, indent=4) ,'Modified'))
+            modified_json = dump_and_replace(le_new, lower_env=envs[0], higher_env=envs[1])
+            changes.append((root, 'modify', path, json.dumps(le_new, indent=4), json.dumps(le_old, indent=4) ,modified_json,json.dumps(he_old, indent=4) ,'Modified'))
  
 def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, path=''):
     # Compare lists of dictionaries based on the "name" key
@@ -295,19 +406,49 @@ def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, 
             # If there are changes in the item
             he_old_item = he_old_dict.get(key)
             if le_old_item != le_new_item:
-                changes.append((root, 'modify', path, json.dumps(le_new_item, indent=4), json.dumps(le_old_item, indent=4), '', json.dumps(he_old_item, indent=4) if he_old_item else '', 'Modified'))
+                modified_json = dump_and_replace(le_new_item, lower_env=envs[0], higher_env=envs[1])
+                changes.append((root, 'modify', path, json.dumps(le_new_item, indent=4), json.dumps(le_old_item, indent=4), modified_json, json.dumps(he_old_item, indent=4) if he_old_item else '', 'Modified'))
                 #changes.append((root, 'modify', path, json.dumps(le_new_item, indent=4), json.dumps(le_old_item, indent=4),'',json.dumps(he_old_item, indent=4), 'Modified'))
  
         else:
+            modified_json = dump_and_replace(le_old_item, lower_env=envs[0], higher_env=envs[1])
             changes.append((root, 'delete', path, json.dumps(le_old_item, indent=4), json.dumps(le_old_item, indent=4), '', json.dumps(he_old_dict.get(key), indent=4) if he_old_dict.get(key) else '', 'Deleted'))
-
+ 
             #changes.append((root, 'delete', path, '' , json.dumps(le_old_item, indent=4),'',json.dumps(he_old_item, indent=4),'Deleted'))
  
  
     # Check for additions
     for key, new_item in le_new_dict.items():
         if key not in le_old_dict:
-            changes.append((root, 'add', path, json.dumps(new_item, indent=4),'','','','Added'))
+            modified_json = dump_and_replace(new_item, lower_env=envs[0], higher_env=envs[1])
+            changes.append((root, 'add', path, json.dumps(new_item, indent=4),'',modified_json,'','Added'))
+ 
+ 
+def update_image_tag(image_str, env_keyword):
+    match = re.match(r'(.+):(.+)', image_str)
+    if not match:
+        return image_str
+    image_repo, tag = match.groups()
+    tag_parts = tag.split('-')
+    if len(tag_parts) < 3:
+        return image_str
+    updated_tag = '-'.join(tag_parts[:2] + [env_keyword])
+    return f"{image_repo}:{updated_tag}"
+ 
+def update_image_repo_in_json_string(json_str, env_keyword):
+    try:
+        data = json.loads(json_str)
+    except json.JSONDecodeError:
+        return json_str  # return as-is if not a valid JSON
+ 
+    if isinstance(data, dict):
+        image_obj = data.get('image', {})
+        if isinstance(image_obj, dict) and 'image_name' in image_obj:
+            image_obj['image_name'] = update_image_tag(image_obj['image_name'], env_keyword)
+            data['image'] = image_obj
+            return json.dumps(data, indent=4)
+ 
+    return json_str
  
  
 def write_changes_to_excel(changes, release_note_path, envs,env_list):
@@ -342,6 +483,14 @@ def write_changes_to_excel(changes, release_note_path, envs,env_list):
         print(change)
         service_name, change_type, key, le_cur, le_prev, he_cur, he_prev, comment = change
  
+        # 🔄 If key is image//repository, update he_cur with transformed tag
+        if key == 'image//image_name':
+            he_cur = update_image_tag(he_cur, envs[1])  # replace after 2nd hyphen
+ 
+        # 🧠 Scenario 2: Root object with embedded image.repository
+        elif isinstance(comment, str) and comment.strip().lower() == 'root object added':
+            he_cur = update_image_repo_in_json_string(he_cur, envs[1])
+ 
         # Check if value exceeds 32,767 characters
         if len(le_cur) > 32767:
             # Save large data to a text file
@@ -372,91 +521,11 @@ def get_input(prompt):
     print("Cannot proceed with execution as no input was entered.")
     exit(1)
  
-def compare_shell_scripts(folder_x_1, folder_x, release_note_path, env):
-    # Define paths to the scripts folders in each branch
-    scripts_folder_x_1 = os.path.join(folder_x_1, f'helm-charts/{env}-values/db-scripts')
-    scripts_folder_x = os.path.join(folder_x, f'helm-charts/{env}-values/db-scripts')
- 
-    # Check if the scripts folders exist
-    if not os.path.isdir(scripts_folder_x_1) or not os.path.isdir(scripts_folder_x):
-        print("Scripts folder not found in one or both branches.")
-        return
- 
-    # List of modified shell scripts for each subfolder
-    modified_scripts_x_1 = {}
-    modified_scripts_x = {}
- 
-    # Iterate through subfolders in scripts_folder_x_1
-    for subfolder in os.listdir(scripts_folder_x_1):
-        subfolder_path_x_1 = os.path.join(scripts_folder_x_1, subfolder)
-        if os.path.isdir(subfolder_path_x_1):
-            modified_scripts_x_1[subfolder] = []
-            modified_scripts_x[subfolder] = []
- 
-            # Check if the subfolder exists in scripts_folder_x
-            subfolder_path_x = os.path.join(scripts_folder_x, subfolder)
-            if os.path.isdir(subfolder_path_x):
-                # Compare files in both subfolders
-                for filename in os.listdir(subfolder_path_x):
-                    if (filename.endswith('.sh') or filename.endswith('.sql') or filename.endswith('.aql')) and filename in os.listdir(subfolder_path_x_1):
-                        file_path_x_1 = os.path.join(subfolder_path_x_1, filename)
-                        file_path_x = os.path.join(subfolder_path_x, filename)
-                        if not cmp(file_path_x_1, file_path_x, shallow=False):
-                            modified_scripts_x_1[subfolder].append(filename)
-                            modified_scripts_x[subfolder].append(filename)
-            else:
-                print(f"Subfolder {subfolder} not found in {scripts_folder_x}.")
- 
-    # If there are modified scripts, add a new sheet in the workbook
-    if any(modified_scripts_x_1.values()):
-        print("The modified sql scripts are: ")
-        for subfolder, scripts in modified_scripts_x_1.items():
-            print(f"{subfolder}: {scripts}")
- 
-        if os.path.exists(release_note_path):
-            for i in os.listdir(release_note_path):
-                if i.endswith(".xlsx"):
-                    excel_file = os.path.join(release_note_path, i)
-                    excel_file_path = os.path.join(release_note_path, excel_file)
- 
-                    if not os.path.exists(excel_file_path):
-                        wb = Workbook()
-                    else:
-                        wb = load_workbook(excel_file_path)
- 
-                    if "DB-scripts-summary" in wb.sheetnames:
-                        ws = wb["DB-scripts-summary"]
-                    else:
-                        ws = wb.create_sheet(title="DB-scripts-summary")
- 
-                    # Add subfolder names as column headers
-                    headers = [f'{subfolder} (Folder {scripts_folder_x_1.split("/")[-2]})' for subfolder in modified_scripts_x.keys()]
-                    ws.append(headers)
- 
-                    # Write the list of modified scripts
-                    max_scripts = max(len(scripts) for scripts in modified_scripts_x.values())
-                    for i in range(max_scripts):
-                        row = []
- 
-                        for subfolder in modified_scripts_x.keys():
-                            if i < len(modified_scripts_x[subfolder]):
-                                row.append(modified_scripts_x[subfolder][i])
-                            else:
-                                row.append("")
-                        ws.append(row)
- 
-                    # Save the updated workbook
-                    wb.save(excel_file_path)
-        else:
-            print("Release note path does not exist.")
- 
-    else:
-        print(f"No modified scripts found in {scripts_folder_x_1}.")
  
 def execute(target_folder_x, lower_env, higher_env, repo_url):
     try:
         release_note_path = os.path.join(target_folder_x, "helm-charts", f"{higher_env}-values", "release_note")
-        
+ 
         print(release_note_path)
         if os.path.exists(release_note_path) and os.path.isdir(release_note_path):
             print(f"Checking folder: {release_note_path}")
@@ -480,16 +549,17 @@ def execute(target_folder_x, lower_env, higher_env, repo_url):
                     excel_file = f"{base_filename}-{date_time_str}.xlsx"
                     file_path = os.path.join(release_note_path, excel_file)
                     print(file_path)
-
+ 
                 pythonexec=os.getenv("PYTHON_EXEC", "python3.11")
-                result = subprocess.run(
-                    [pythonexec, sys.argv[6] ,repo_url, lower_env, higher_env,file_path],
-                    check=True,
-                    capture_output=True,
-                    text=True
-                )
-                return result.stdout
-
+                # result = subprocess.run(
+                #     [pythonexec, sys.argv[6] ,repo_url, lower_env, higher_env,file_path],
+                #     check=True,
+                #     capture_output=True,
+                #     text=True
+                # )
+                result = True
+                return result
+ 
  
  
     except subprocess.CalledProcessError as e:
@@ -497,25 +567,25 @@ def execute(target_folder_x, lower_env, higher_env, repo_url):
         print("STDOUT:", e.stdout)
         print("STDERR:", e.stderr)
  
-
+ 
 def create_upgrade_services_txt(excel_path, sheet_name, repo_root, lower_env):
     txt_path = os.path.join(repo_root, 'upgrade-services.txt')
-
+ 
     if os.path.exists(txt_path):
         os.remove(txt_path)
-
+ 
     # Identify the correct .xlsx file
     file_path = None
     for i in os.listdir(excel_path):
         if i.endswith(".xlsx"):
             file_path = os.path.join(excel_path, i)
             break
-
+ 
     if not file_path:
         print("No Excel file found in the given path.")
     else:
         wb = load_workbook(file_path)
-        
+ 
         if sheet_name not in wb.sheetnames:
             print("Application release note does not exist")
         else:
@@ -528,23 +598,24 @@ def create_upgrade_services_txt(excel_path, sheet_name, repo_root, lower_env):
                 comment_col = headers.index(f'Comment') + 1
             except ValueError as e:
                 raise ValueError(f"Required column missing: {e}")
-
+ 
             with open(txt_path, 'w') as file:
                 for row in ws.iter_rows(min_row=2):
                     key_cell = row[key_col - 1].value
                     service_name = row[service_name_col - 1].value
                     value = row[value_col - 1].value
                     comment = row[comment_col - 1].value
-
+ 
                     if key_cell and ('image//tag' in str(key_cell) or 'image//image_name' in str(key_cell)):
                         if service_name and value:
                             file.write(f"{service_name}:{value}\n")
                             print(f"{service_name}:{value}")
-                    elif comment and comment.strip().lower() == "root object added":
+                    elif comment and comment.strip().lower() == "root object added" and service_name not in ("data", "env"):
                         if value:
                             try:
                                 parsed = json.loads(value)
-                                tag = parsed.get("image", {}).get("tag")
+                                print(parsed)
+                                tag = parsed.get("image", {}).get("image_name")
                                 if service_name and tag:
                                     file.write(f"{service_name}:{tag}\n")
                                     print(f"{service_name}:{tag}")
@@ -552,11 +623,13 @@ def create_upgrade_services_txt(excel_path, sheet_name, repo_root, lower_env):
                                 print(f"Failed to parse JSON for service {service_name}: {e}")
                         else:
                             print(f"Value is None for service {service_name} with 'root object added'")
-
+                    else:
+                        print(f"Skipping service {service_name}")
+ 
  
 def main():
     repos_info = {
-        'promo-helm-charts': sys.argv[5]
+        'mb-helmcharts': sys.argv[5]
     }
  
     for repo_name, repo_url in repos_info.items():
@@ -566,14 +639,15 @@ def main():
         promote_branch_x = sys.argv[2]
         target_folder_x_1 = os.path.join(os.getcwd(), "generate-config", "promotion-x-1", f"{repo_name}")
         target_folder_x = os.path.join(os.getcwd(), "generate-config", "promotion-x", f"{repo_name}")
-    envs = []
+ 
     envs.append(sys.argv[3].strip())
     envs.append(sys.argv[4].strip())
     print("The list of envs is",envs)
     env_list = ['dev2', 'sit2', 'uat2', 'prod']
+    repos = sys.argv[6:]
     # Environment list (you can modify based on your use case)
     # envs = ['dev', 'sit', 'uat', 'preprod', 'perf', 'mig/dm', 'sec', 'prod']
-    
+ 
     github_token = os.getenv("GIT_TOKEN")
     if github_token and "github.com" in repo_url:
     # Inject token into repo URL (safe for HTTPS GitHub URLs)
@@ -581,6 +655,8 @@ def main():
             repo_url = repo_url.replace("https://", f"https://{github_token}@")
         else:
             raise ValueError("Unsupported repo_url format. Must start with https://")
+ 
+ 
  
     # To Clone the repo from promotion-x-1 branch
     clone_repo(repo_url, promote_branch_x_1, target_folder_x_1)
@@ -592,7 +668,7 @@ def main():
     # if envs[0].startswith('dev'):
     print("dev2 is the lower-env")
     #to create the release note folder
-    release_note_path = os.path.join(target_folder_x, "helm-charts", f"{envs[1]}-values", f"release_note")
+    release_note_path = os.path.join(target_folder_x, "helm-charts", f"{envs[1]}-values", "app-values", "release_note")
     if os.path.exists(release_note_path) and os.path.isdir(release_note_path):
         print(f"Checking folder: {release_note_path}")
  
@@ -667,6 +743,14 @@ def main():
     result = execute(target_folder_x, envs[0],envs[1], repo_url)
     print("The result is: ", result)
  
+ 
+ 
+    yaml_path = os.path.dirname(le_new_json_path)
+ 
+    # fetch_jira_details_from_yaml_folder(github_token, repos, "dev1-lz", yaml_path)
+ 
+    create_release_note_summary(yaml_path, target_folder_x, release_note_path, envs[1])
+ 
     create_upgrade_services_txt(release_note_path, envs[1], target_folder_x, envs[0])
     try:
         subprocess.run(['git', 'add', "."], cwd =target_folder_x, check=True, capture_output=True, text=True)
@@ -674,8 +758,8 @@ def main():
         print(status_result.stdout)
         print(status_result.stderr)
         # Pull latest changes with rebase to avoid non-fast-forward errors
-        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =target_folder_x ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd =target_folder_x, check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.email', 'surabhi.h@hdfcbank.com'], cwd =target_folder_x ,check=True, timeout=30)
+        subprocess.run(['git', 'config', 'user.name', 'MGXR3734'], cwd =target_folder_x, check=True, timeout=30)
         subprocess.run(['git', 'commit', '-m',
                     f'Pushing the release_note into the branch: {sys.argv[2]} '], cwd =target_folder_x, check=True, capture_output=True, text=True)
         subprocess.run(['git', 'pull', '--rebase', 'origin', sys.argv[2]], cwd=target_folder_x, check=True, capture_output=True, text=True)
@@ -699,4 +783,5 @@ def main():
  
 if __name__ == '__main__':
     main()
+ 
  
