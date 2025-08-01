@@ -1,0 +1,2 @@
+INSERT INTO dev.payments (PK, payment_id, user_id, amount, method, success) VALUES ('pay008', 'pay008', 'u008', 4599, 'credit_card', true)
+INSERT INTO dev.payments (PK, payment_id, user_id, amount, method, success) VALUES ('pay009', 'pay009', 'u009', 1999, 'upi', true)
