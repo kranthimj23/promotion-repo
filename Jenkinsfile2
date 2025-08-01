@@ -37,7 +37,7 @@ pipeline {
                 script {
                     echo "Checking commits in folder: release_note"
                     def commits = sh(
-                        script: "git log -n 10 --pretty=format:\"%H|%s\" -- helm-charts/${env.higher_env}-values/release_note/*.xlsx",
+                        script: "git log -n 10 --pretty=format:\"%H|%s\" -- helm-charts/${env.higher_env}-values/app-values/release_note/*.xlsx",
                         returnStdout: true
                     ).trim()
                     echo commits
