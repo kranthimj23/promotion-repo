@@ -107,7 +107,6 @@ def fetch_branches(file_path, lower_env, update_lower_env, new_branch_created, h
         if lower_env != 'dev' and lower_branch == higher_branch:
             new_branch = create_new_branch(lower_branch, new_version)
             update_lower_env = True
-            new_branch_created = True
             #print(f"New branch is created values to be populated in Lower-env-->{update_lower_env}")
             update_excel_with_new_branch(file_path, sheet, 'dev', new_branch)
             return lower_branch, new_branch, update_lower_env, new_branch_created
@@ -274,7 +273,7 @@ def main():
     if update_lower_env:
         envs.append('dev')
         # envs.append(lower_env)
-        envs.append(higher_env)
+        envs.append(lower_env)
         reverse_promotion = True
     else:
         envs.append(lower_env)
