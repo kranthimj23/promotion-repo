@@ -1,0 +1,29 @@
+env:
+  service_user:
+  - name: key2
+    value: value2
+  - name: key4
+    value: value4
+  - name: key5
+    value: value5
+  - name: name
+    value: man
+  - name: name
+    value: himanshu
+image:
+  imageName: asia-south1-docker.pkg.prod/nice-virtue-463917-m0/service-user/user:48-prod
+  pullPolicy: IfNotPresent
+  repository: asia-south1-docker.pkg.prod/nice-virtue-463917-m0/service-user/user
+  tag: 48-prod
+replicaCount: 1
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+service:
+  port: 8080
+  type: ClusterIP
+serviceName: service-user
