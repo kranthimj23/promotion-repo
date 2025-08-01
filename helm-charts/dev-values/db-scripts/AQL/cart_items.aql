@@ -1,4 +1,0 @@
-INSERT INTO dev.cart_items (PK, cart_item_id, user_id, product_id, quantity, added_at) VALUES ('ci001', 'CI001', 'u001', 'p002', 2, '2024-07-01T10:00:00Z');
-INSERT INTO dev.cart_items (PK, cart_item_id, user_id, product_id, quantity, added_at) VALUES ('ci002', 'CI002', 'u001', 'p004', 1, '2024-07-01T10:05:00Z');
-INSERT INTO dev.cart_items (PK, cart_item_id, user_id, product_id, quantity, added_at) VALUES ('ci003', 'CI003', 'u003', 'p001', 1, '2024-07-02T11:30:00Z');
-INSERT INTO dev.cart_items (PK, cart_item_id, user_id, product_id, quantity, added_at) VALUES ('ci004', 'CI004', 'u002', 'p003', 1, '2024-07-03T09:15:00Z');
