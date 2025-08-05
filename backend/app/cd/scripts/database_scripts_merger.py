@@ -1,15 +1,21 @@
 import os
 import subprocess
 import shutil
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook
 import tempfile
 import re
 import sys
  
 def add_value_to_columns(file_path, sheet_name, file_name, branch_name):
+    if os.path.exists(file_path):
     # Load the workbook
-    workbook = load_workbook(file_path)
-    print("AQL__SQL",file_path)
+        workbook = load_workbook(file_path)
+        print("AQL__SQL",file_path)
+    else:
+        workbook = Workbook()
+        # Remove the default sheet created by openpyxl
+        default_sheet = workbook.active
+        workbook.remove(default_sheet)
  
     # Check if the sheet exists
     if sheet_name not in workbook.sheetnames:
@@ -21,8 +27,7 @@ def add_value_to_columns(file_path, sheet_name, file_name, branch_name):
         sheet.cell(row=1, column=2, value="Branchname")
     else:
         sheet = workbook[sheet_name]
- 
-    # Select the specified sheet
+
  
  
     # Find the column indices for "Filename" and "Branch"
@@ -403,8 +408,6 @@ if __name__ == "__main__":
     github_url = sys.argv[1]
     lower_env = sys.argv[2]
     higher_env = sys.argv[3]
-
-        
     branches_to_merge = get_branch_range(lower_env, higher_env)
     promotion_branch_name = branches_to_merge[-1]
     aql_folder_name = rf'helm-charts/{lower_env}-values/db-scripts/AQL'
@@ -415,5 +418,5 @@ if __name__ == "__main__":
     clone_repo(github_url, promotion_branch_name, main_temp_dir)
     os.chdir(main_temp_dir) #change directory to target
     merge_branches(branches_to_merge, promotion_branch_name, aql_folder_name, sql_folder_name,lower_env,higher_env)
-    update_meta_sheet(lower_env, higher_env, promotion_branch_name, github_url)
+    #update_meta_sheet(lower_env, higher_env, promotion_branch_name, github_url)
     print("Scripts executed")
