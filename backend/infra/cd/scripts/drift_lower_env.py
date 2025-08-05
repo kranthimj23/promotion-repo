@@ -251,9 +251,7 @@ def main():
     print("Copying to:", x_1infra_folder)
     copy_contents(x_1infra_folder, x_infra_folder)
 
- 
- 
- 
+
     # output_file = f'{target_folder_x}\helm-charts\{henv}-values\infra-values/releaseno\infra_difference.xlsx'  # Specify output path
  
     output_file = os.path.join(f"{target_folder_x}", "helm-charts", f"{henv}-values", "infra-values", "release_note", "infra_difference.xlsx")
