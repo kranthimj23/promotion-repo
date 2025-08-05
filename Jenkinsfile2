@@ -1,13 +1,8 @@
-//This script implements the below logic:
-//1) Checks if the release-note is updated based on the commit history.
-//2) If the release-note is updated, then generate the config.
-
 pipeline {
+    agent any
 
-    agent any 
- 
     environment {
-        PYTHON_EXEC = 'python3.11'  // Or adjust to 'python' if needed
+        PYTHON_EXEC = 'python3.11'
         GIT_CREDENTIALS_ID = credentials('jenkins-token')
     }
 
@@ -67,50 +62,56 @@ pipeline {
             steps {
                 script {
                     if (executePython) {
-                        configFileProvider([
-                            configFile(fileId: 'generate-config', targetLocation: 'generate-config.py'),
-                            configFile(fileId: 'drift_promotion', targetLocation: 'drift_promotion.py')
+                        withCredentials([
+                            string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')
                         ]) {
-                            withCredentials([
-                                string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')
-                            ]) {
+                            // Define base directory for checked-out repo
+                            def repoDir = "${WORKSPACE}/zdt-manager-src"
 
-                                //def result_infra = sh(
-                                    //script: "${env.PYTHON_EXEC} drift_promotion.py ${env.github_url} ${env.promotion_branch_x} ${env.higher_env}",
-                                  //  returnStdout: true
-                                //).trim()
-                                //echo result_infra
+                            // Paths to the two Python scripts
+                            def generateConfigPath = "${repoDir}/backend/app/cd/scripts/generate-config.py"
+                            def driftPromotionPath = "${repoDir}/backend/infra/cd/scripts/drift_promotion.py"
 
-   //                             def targetFile = "${WORKSPACE}/helm-charts/${env.higher_env}-values/db-scripts/AQL/${env.higher_env}.txt"
-//
-     //                           if (fileExists(targetFile)) {
-   //                                 echo "File exists: ${targetFile}"
-//
-                                    // ✅ Wait for downstream job and fail if it fails
-                                    // def downstreamBuild = build job: 'ansible_sparse_execution_cd',
-                                      //  parameters: [
-                                         //   string(name: 'higher_env', value: env.higher_env),
-                                           // string(name: 'promotion_branch_x', value: env.promotion_branch_x)
-                                        //],
-                                    //    wait: true,
-                                  //      propagate: true
-                                //} else {
-                                  //  echo "File does NOT exist: ${targetFile}"
-                                //}
+                            // Optionally run drift_promotion.py if needed
+                            def resultDrift = sh(
+                                script: "${env.PYTHON_EXEC} ${driftPromotionPath} ${env.github_url} ${env.promotion_branch_x} ${env.higher_env}",
+                                returnStdout: true
+                            ).trim()
+                            echo resultDrift
 
-                                def result = sh(
-                                    script: "${env.PYTHON_EXEC} generate-config.py ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch_x} ${env.lower_env} ${env.higher_env}",
-                                    returnStdout: true
-                                ).trim()
-                                echo result
+                            // Run generate-config.py
+                            def result = sh(
+                                script: "${env.PYTHON_EXEC} ${generateConfigPath} ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch_x} ${env.lower_env} ${env.higher_env}",
+                                returnStdout: true
+                            ).trim()
+                            echo result
 
-                               // build job: 'deploy', wait: true
-                               // parameters: [
-                               //         string(name: 'env_namespace', value: env.higher_env),
-                               //         string(name: 'latest_branch', value: env.promotion_branch_x),
-                               //         string(name: 'repo_url', value: env.github_url)
-                               //       ]
+                            // Check if output file exists, then run downstream build
+                            def targetFile = "${WORKSPACE}/helm-charts/${env.higher_env}-values/db-scripts/AQL/${env.higher_env}.txt"
+                            if (fileExists(targetFile)) {
+                                echo "File exists: ${targetFile}"
+
+                                def downstreamBuild = build job: 'ansible_sparse_execution_cd',
+                                    parameters: [
+                                        string(name: 'higher_env', value: env.higher_env),
+                                        string(name: 'promotion_branch_x', value: env.promotion_branch_x)
+                                    ],
+                                    wait: true,
+                                    propagate: true
+                            } else {
+                                echo "File does NOT exist: ${targetFile}"
                             }
+
+                            // Optional: Trigger deploy pipeline if needed
+                            /*
+                            build job: 'deploy',
+                                parameters: [
+                                    string(name: 'env_namespace', value: env.higher_env),
+                                    string(name: 'latest_branch', value: env.promotion_branch_x),
+                                    string(name: 'repo_url', value: env.github_url)
+                                ],
+                                wait: true
+                            */
                         }
                     } else {
                         echo "No matching commit messages found. Skipping Python script execution."
