@@ -28,6 +28,9 @@ def update_helm_chart_temp(repo_url, image_repo, image_tag, ns, microservice):
     with tempfile.TemporaryDirectory() as tmpdirname:
         print(f"\n>>> Cloning dev branch of repo into temporary directory: {tmpdirname}")
         run_command(f"git clone --branch dev {repo_url} {tmpdirname}")
+        # Ensure future pushes use token-authenticated URL
+        safe_url = f"https://{github_token}@github.com/kranthimj23/service-user.git"
+        run_command(f"git remote set-url origin {safe_url}", cwd=tmpdirname)
         run_command('git config user.name "kranthimj23"', cwd=tmpdirname)
         run_command('git config user.email "kranthimj23@gmail.com"', cwd=tmpdirname)
 
