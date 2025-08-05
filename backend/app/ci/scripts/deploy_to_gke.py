@@ -8,7 +8,7 @@ def run_command(cmd, cwd=None):
     print(f"\n>>> Running Command:\n{cmd}")
     print(f">>> Working Directory: {cwd or os.getcwd()}")
     try:
-        result = subprocess.run(cmd, shell=True, text=True, capture_output=True, cwd=cwd, timeout=60)
+        result = subprocess.run(cmd, shell=True, text=True, capture_output=True, cwd=cwd, timeout=120)
         print(">>> STDOUT:\n", result.stdout)
         if result.stderr:
             print(">>> STDERR:\n", result.stderr)
@@ -20,23 +20,21 @@ def run_command(cmd, cwd=None):
 def update_helm_chart_temp(repo_url, image_repo, image_tag, ns, microservice):
     github_token = os.getenv("GIT_TOKEN")
     if github_token and "github.com" in repo_url:
-        # Inject token into repo URL (safe for HTTPS GitHub URLs)
         if repo_url.startswith("https://"):
             repo_url = repo_url.replace("https://", f"https://{github_token}@")
         else:
             raise ValueError("Unsupported repo_url format. Must start with https://")
+
     with tempfile.TemporaryDirectory() as tmpdirname:
         print(f"\n>>> Cloning dev branch of repo into temporary directory: {tmpdirname}")
         run_command(f"git clone --branch dev {repo_url} {tmpdirname}")
         run_command('git config user.name "kranthimj23"', cwd=tmpdirname)
         run_command('git config user.email "kranthimj23@gmail.com"', cwd=tmpdirname)
-        os.chdir(tmpdirname)
 
-        # Locate the correct values.yaml file
-        print("path is",os.chdir(tmpdirname))
-        #print(os.path.listdir(tmpdirname))
+        os.chdir(tmpdirname)
+        print(f"Changed working directory to: {tmpdirname}")
+
         values_path = os.path.join('helm-charts', 'dev-values')
-        print(values_path)
         yaml_path = os.path.join(values_path, f"{microservice}.yaml")
         if not os.path.exists(yaml_path):
             raise FileNotFoundError(f"No YAML file found for microservice: {microservice}")
@@ -50,20 +48,18 @@ def update_helm_chart_temp(repo_url, image_repo, image_tag, ns, microservice):
 
         data['image']['repository'] = image_repo
         data['image']['tag'] = image_tag
-        data['image']['imageName'] = image_repo:image_tag
+        data['image']['imageName'] = f"{image_repo}:{image_tag}"
 
         with open(yaml_path, 'w') as f:
-            yaml.safe_dump(data, f)
-            
-        # Run Helm upgrade
+            yaml.safe_dump(data, f, default_flow_style=False)
+
         chart_path = os.path.join(tmpdirname, 'helm-charts')
         helm_cmd = (
             f"helm upgrade --install {microservice} {chart_path} -f {yaml_path} -n {ns} "
-            f"--set image.repository={image_repo} --set image.tag={image_tag}"
+            f"--create-namespace --set image.repository={image_repo} --set image.tag={image_tag}"
         )
         run_command(helm_cmd)
 
-        #Git add, commit, and push
         run_command(f"git add {yaml_path}", cwd=tmpdirname)
         commit_msg = f"Update image repository to {image_repo} and tag to {image_tag}"
         run_command(f'git commit -m "{commit_msg}"', cwd=tmpdirname)
@@ -73,7 +69,7 @@ def update_helm_chart_temp(repo_url, image_repo, image_tag, ns, microservice):
 
 def main():
     CLUSTER = "autopilot-cluster-1"
-    ZONE = "us-central1"
+    ZONE = "asia-southeast1"
     PROJECT_ID = "nice-virtue-463917-m0"
 
     if len(sys.argv) != 6:
@@ -90,7 +86,6 @@ def main():
     print(">>> Starting deployment script")
     print(f"CLUSTER: {CLUSTER} | ZONE: {ZONE} | PROJECT_ID: {PROJECT_ID} | NAMESPACE: {ns}")
 
-    # Authenticate with GKE
     run_command(
         f"gcloud container clusters get-credentials {CLUSTER} --region {ZONE} --project {PROJECT_ID}"
     )
@@ -103,5 +98,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f"\n Deployment failed: {e}")
-        sys.exit(1) 
+        print(f"\nDeployment failed: {e}")
+        sys.exit(1)
