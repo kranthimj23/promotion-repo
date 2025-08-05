@@ -1,0 +1,112 @@
+pipeline {
+    agent any
+    environment {
+        PYTHON_EXEC = 'python3.11'
+        GIT_CREDENTIALS_ID = credentials('jenkins-token')
+    }
+
+    stages {
+
+        stage('Checkout with credentials') {
+            steps {
+                deleteDir()
+                script {
+                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: "*/main"]],
+                            userRemoteConfigs: [[
+                                url: "${env.github_url}",
+                                credentialsId: env.GIT_CREDENTIALS_ID
+                            ]]
+                        ])
+                    }
+                }
+            }
+        }
+
+        stage('Checkout zdt-manager-src repo') {
+            steps {
+                dir('zdt-manager-src') {
+                    script {
+                        withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                            checkout([
+                                $class: 'GitSCM',
+                                branches: [[name: "*/zdt-application"]],
+                                userRemoteConfigs: [[
+                                    url: "https://${GIT_TOKEN}@github.com/kranthimj23/zdt-manager-src.git"
+                                ]]
+                            ])
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Load and Run merger.py') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                        def mergerScript = 'zdt-manager-src/backend/app/cd/scripts/merger.py'
+                        def result = sh(
+                            script: "${env.PYTHON_EXEC} ${mergerScript} ${env.lower_env} ${env.higher_env} ${env.github_url} ${env.new_version}",
+                            returnStdout: true
+                        ).trim()
+
+                        echo "Wait time of 5 secs"
+                        sleep time: 5, unit: 'SECONDS'
+
+                        def (x1, x2, low, high, isNew) = result.tokenize(',').collect { it?.trim() ?: '' }
+                        env.X1_BRANCH = x1
+                        env.X2_BRANCH = x2
+                        env.LOWER_ENV = low
+                        env.HIGHER_ENV = high
+                        env.NEW_BRANCH = isNew?.toLowerCase() ?: 'false'
+                    }
+                }
+            }
+        }
+
+        stage('Trigger Push-Files-To-Branch') {
+            steps {
+                script {
+                    if (env.NEW_BRANCH?.toLowerCase() == 'true') {
+                        echo "Triggering Push-Files-To-Branch job for new branch: ${env.X2_BRANCH}"
+
+                        withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                            def scriptPath = 'zdt-manager-src/backend/app/cd/scripts/values-promotion.py'
+                            echo "${env.PYTHON_EXEC} ${scriptPath} ${env.github_url} ${env.X2_BRANCH}"
+                            sh "${env.PYTHON_EXEC} ${scriptPath} ${env.github_url} ${env.X2_BRANCH}"
+                        }
+                    } else {
+                        echo "Skipping Push-Files-To-Branch because NEW_BRANCH is not 'true'. Got: '${env.NEW_BRANCH}'"
+                    }
+                }
+            }
+        }
+
+        stage('Generate release-note for Application, DB and Infra') {
+            steps {
+                script {
+                    if (env.X1_BRANCH && env.X2_BRANCH) {
+                        withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                            def releaseNoteScript = 'zdt-manager-src/backend/app/cd/scripts/create-release-note.py'
+                            def mergerScript = 'zdt-manager-src/backend/app/cd/scripts/database_scripts_merger.py'
+                            def driftScript  = 'zdt-manager-src/backend/infra/cd/scripts/drift_lower_env.py'
+
+                            sh "chmod +x ${mergerScript}"
+                            echo "Running create-release-note.py with: ${env.X1_BRANCH}, ${env.X2_BRANCH}, ${env.LOWER_ENV}, ${env.HIGHER_ENV}, ${env.github_url}"
+
+                            sh "${env.PYTHON_EXEC} ${releaseNoteScript} ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url} ${mergerScript}"
+
+                            // If you want to run drift_lower_env.py too, uncomment below:
+                            // sh "${env.PYTHON_EXEC} ${driftScript} ${env.github_url} ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV}"
+                        }
+                    } else {
+                        echo "Skipping release note generation because required branches are missing."
+                    }
+                }
+            }
+        }
+    }
+}
