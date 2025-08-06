@@ -65,7 +65,7 @@ def copy_missing_yaml_files(higher_env_x_1, lower_env_x, lower_env, higher_env):
                 file_content = file.read()  # Read the entire file into a string [1][2]
  
             # Replace the string
-            updated_content = file_content.replace(lower_env, higher_env)  # Replace occurrences of the le_old string with the new string [2][3][4]
+            updated_content = safe_env_replace(updated_content, 'dev', 'sit') # Replace occurrences of the le_old string with the new string [2][3][4]
  
             with open(destination_path, 'w') as file:
                 file.write(updated_content)  # Write the updated content back to the file [2]
@@ -81,6 +81,20 @@ def copy_missing_yaml_files(higher_env_x_1, lower_env_x, lower_env, higher_env):
         print(f"Error: The folder {higher_env_x_1} does not exist.")
     if not os.path.exists(lower_env_x):
         print(f"Error: The folder {lower_env_x} does not exist.")
+
+
+def safe_env_replace(content: str, lower_env: str, higher_env: str) -> str:
+    """
+    Replaces environment references like 'dev2' → 'sit2', but avoids breaking registry domains like '.pkg.dev'
+    """
+    # Replace only whole words or known context-sensitive tags
+    content = re.sub(rf"(\b){re.escape(lower_env)}(\b)", rf"\1{higher_env}\2", content)
+
+    # Optional: Replace tag values only if clearly a tag
+    content = re.sub(rf"(:[0-9]+-){re.escape(lower_env)}", rf"\1{higher_env}", content)
+
+    return content       
+
  
 def create_release_note_summary(files_path, target_folder_x, existing_release_note_dir,input_sheet_name):
     print("Executing create release note.py")
