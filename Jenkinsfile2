@@ -21,7 +21,8 @@ pipeline {
                             userRemoteConfigs: [[
                                 url: "${env.github_url}",
                                 credentialsId: env.GIT_CREDENTIALS_ID
-                            ]]
+                            ]],
+                            extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'zdt-manager-src']]
                         ])
                     }
                 }
@@ -88,7 +89,7 @@ pipeline {
                         if (fileExists(targetFile)) {
                             echo "File exists: ${targetFile}"
 
-                            // ✅ ansible_sparse_execution_cd step
+                            // ✅ ansible_sparse_execution_cd step (currently commented)
                             /*
                             build job: 'ansible_sparse_execution_cd',
                                 parameters: [
@@ -102,7 +103,7 @@ pipeline {
                             echo "File does NOT exist: ${targetFile}"
                         }
 
-                        // Optional downstream deploy job (commented)
+                        // Optional downstream deploy job (still commented)
                         /*
                         build job: 'deploy',
                             parameters: [
