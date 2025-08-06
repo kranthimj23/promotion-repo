@@ -39,8 +39,6 @@ pipeline {
                     echo commits
 
                     def pattern = ~("Verified RN in:" + env.promotion_branch_x)
-
-                    // Declare executePython safely
                     def executePython = false
 
                     commits.split('\n').each { line ->
@@ -55,7 +53,6 @@ pipeline {
                         }
                     }
 
-                    // Set it globally for next stage
                     env.EXECUTE_PYTHON = executePython.toString()
                 }
             }
@@ -72,30 +69,26 @@ pipeline {
                     ]) {
                         def repoDir = "${WORKSPACE}/zdt-manager-src"
 
-                        // Correct Python script paths
                         def driftPromotionPath = "${repoDir}/backend/infra/cd/scripts/drift_promotion.py"
                         def generateConfigPath = "${repoDir}/backend/app/cd/scripts/generate-config.py"
 
-                        // Execute drift_promotion.py
                         def resultDrift = sh(
                             script: "${env.PYTHON_EXEC} ${driftPromotionPath} ${env.github_url} ${env.promotion_branch_x} ${env.higher_env}",
                             returnStdout: true
                         ).trim()
                         echo resultDrift
 
-                        // Execute generate-config.py
                         def resultGen = sh(
                             script: "${env.PYTHON_EXEC} ${generateConfigPath} ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch_x} ${env.lower_env} ${env.higher_env}",
                             returnStdout: true
                         ).trim()
                         echo resultGen
 
-                        // Check for expected file output
                         def targetFile = "${WORKSPACE}/helm-charts/${env.higher_env}-values/db-scripts/AQL/${env.higher_env}.txt"
                         if (fileExists(targetFile)) {
                             echo "File exists: ${targetFile}"
-                            
-                            // ✅ Include ansible_sparse_execution_cd step
+
+                            // ✅ ansible_sparse_execution_cd step
                             /*
                             build job: 'ansible_sparse_execution_cd',
                                 parameters: [
@@ -104,10 +97,10 @@ pipeline {
                                 ],
                                 wait: true,
                                 propagate: true
+                            */
                         } else {
                             echo "File does NOT exist: ${targetFile}"
                         }
-                        */
 
                         // Optional downstream deploy job (commented)
                         /*
@@ -124,14 +117,13 @@ pipeline {
             }
         }
 
-            stage('Skip Python if commit not matched') {
-                when {
-                    expression { return env.EXECUTE_PYTHON != 'true' }
-                }
-                steps {
-                    echo "No matching commit messages found. Skipping Python script execution."
-                    error("No matching commit message found.")
-                }
+        stage('Skip Python if commit not matched') {
+            when {
+                expression { return env.EXECUTE_PYTHON != 'true' }
+            }
+            steps {
+                echo "No matching commit messages found. Skipping Python script execution."
+                error("No matching commit message found.")
             }
         }
     }
