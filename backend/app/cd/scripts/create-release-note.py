@@ -66,6 +66,9 @@ def copy_missing_yaml_files(higher_env_x_1, lower_env_x, lower_env, higher_env):
  
             # Replace the string
             updated_content = safe_env_replace(updated_content, 'dev', 'sit') # Replace occurrences of the le_old string with the new string [2][3][4]
+
+            print("[DEBUG] YAML after safe_env_replace:")
+            print(updated_content)
  
             with open(destination_path, 'w') as file:
                 file.write(updated_content)  # Write the updated content back to the file [2]
@@ -85,13 +88,17 @@ def copy_missing_yaml_files(higher_env_x_1, lower_env_x, lower_env, higher_env):
 
 def safe_env_replace(content: str, lower_env: str, higher_env: str) -> str:
     """
-    Replaces environment references like 'dev2' → 'sit2', but avoids breaking registry domains like '.pkg.dev'
+    Replaces tag suffixes (e.g., :14-dev → :14-sit) without changing registry domains (e.g., .pkg.dev).
     """
-    # Replace only whole words or known context-sensitive tags
-    content = re.sub(rf"(\b){re.escape(lower_env)}(\b)", rf"\1{higher_env}\2", content)
+    # Replace tag suffix: e.g., :14-dev → :14-sit
+    content = re.sub(
+        rf'(:[\w\-]+-){re.escape(lower_env)}(\b)',
+        rf'\1{higher_env}',
+        content
+    )
 
-    # Optional: Replace tag values only if clearly a tag
-    content = re.sub(rf"(:[0-9]+-){re.escape(lower_env)}", rf"\1{higher_env}", content)
+    # DO NOT replace 'dev' inside domain names like .pkg.dev
+    # So we skip global replace
 
     return content       
 
