@@ -140,7 +140,7 @@ pipeline {
                         }
 
                         // ✅ Optional: downstream deploy job
-                        /*
+                        
                         build job: 'deploy',
                             parameters: [
                                 string(name: 'env_namespace', value: env.higher_env),
@@ -148,7 +148,7 @@ pipeline {
                                 string(name: 'repo_url', value: env.github_url)
                             ],
                             wait: true
-                        */
+                        
                     }
                 }
             }
