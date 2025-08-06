@@ -15,55 +15,60 @@ pipeline {
                 deleteDir()
                 script {
                     withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
-                        dir('zdt-manager-src') {
-                            checkout([
-                                $class: 'GitSCM',
-                                branches: [[name: "*/${env.promotion_branch_x}"]],
-                                userRemoteConfigs: [[
-                                    url: "${env.github_url}",
-                                    credentialsId: env.GIT_CREDENTIALS_ID
-                                ]]
-                            ])
-                        }
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: "*/${env.promotion_branch_x}"]],
+                            userRemoteConfigs: [[
+                                url: "${env.github_url}",
+                                credentialsId: env.GIT_CREDENTIALS_ID
+                            ]]
+                        ])
                     }
+                }
+            }
+        }
+
+        stage('Debug workspace contents') {
+            steps {
+                script {
+                    echo "Listing workspace files recursively:"
+                    sh 'ls -R'
                 }
             }
         }
 
         stage('Check commits in release_note') {
             steps {
-                dir('zdt-manager-src') {
-                    script {
-                        echo "Checking commits in folder: release_note"
+                script {
+                    echo "Checking commits in folder: release_note"
 
-                        // Ensure git context is valid
-                        if (!fileExists(".git")) {
-                            error(".git directory missing — make sure repository checkout was successful.")
-                        }
+                    // Ensure git context is valid
+                    if (!fileExists(".git")) {
+                        error(".git directory missing — make sure repository checkout was successful.")
+                    }
 
-                        def commits = sh(
-                            script: "git log -n 10 --pretty=format:\"%H|%s\" -- helm-charts/${env.higher_env}-values/app-values/release_note/*.xlsx",
-                            returnStdout: true
-                        ).trim()
-                        echo commits
+                    def commits = sh(
+                        script: "git log -n 10 --pretty=format:\"%H|%s\" -- helm-charts/${env.higher_env}-values/app-values/release_note/*.xlsx",
+                        returnStdout: true
+                    ).trim()
+                    echo commits
 
-                        def pattern = ~("Verified RN in:" + env.promotion_branch_x)
-                        def executePython = false
+                    def pattern = ~("Verified RN in:" + env.promotion_branch_x)
+                    def executePython = false
 
-                        commits.split('\n').each { line ->
-                            def parts = line.split('\\|', 2)
-                            if (parts.length == 2) {
-                                def commitMsg = parts[1]
-                                echo "Checking commit message: ${commitMsg}"
-                                if ((commitMsg =~ pattern).matches()) {
-                                    echo "Found matching commit message: ${commitMsg}"
-                                    executePython = true
-                                }
+                    commits.split('\n').each { line ->
+                        def parts = line.split('\\|', 2)
+                        if (parts.length == 2) {
+                            def commitMsg = parts[1]
+                            echo "Checking commit message: ${commitMsg}"
+                            if ((commitMsg =~ pattern).matches()) {
+                                echo "Found matching commit message: ${commitMsg}"
+                                executePython = true
                             }
                         }
-
-                        env.EXECUTE_PYTHON = executePython.toString()
                     }
+
+                    env.EXECUTE_PYTHON = executePython.toString()
                 }
             }
         }
@@ -77,7 +82,7 @@ pipeline {
                     withCredentials([
                         string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')
                     ]) {
-                        def repoDir = "${WORKSPACE}/zdt-manager-src"
+                        def repoDir = "${WORKSPACE}"  // Repo checked out directly here
 
                         def driftPromotionPath = "${repoDir}/backend/infra/cd/scripts/drift_promotion.py"
                         def generateConfigPath = "${repoDir}/backend/app/cd/scripts/generate-config.py"
@@ -100,7 +105,7 @@ pipeline {
                         if (fileExists(targetFile)) {
                             echo "File exists: ${targetFile}"
 
-                            // ✅ Re-enabled ansible_sparse_execution_cd step
+                            // ✅ ansible_sparse_execution_cd step (currently commented)
                             /*
                             build job: 'ansible_sparse_execution_cd',
                                 parameters: [
@@ -114,7 +119,7 @@ pipeline {
                             echo "File does NOT exist: ${targetFile}"
                         }
 
-                        // Optional downstream deploy job
+                        // Optional downstream deploy job (still commented)
                         /*
                         build job: 'deploy',
                             parameters: [
