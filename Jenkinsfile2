@@ -1,0 +1,138 @@
+pipeline {
+    agent any
+
+    environment {
+        PYTHON_EXEC = 'python3.11'
+        GIT_CREDENTIALS_ID = credentials('jenkins-token')
+    }
+
+    options { skipDefaultCheckout() }
+
+    stages {
+
+        stage('Checkout with credentials') {
+            steps {
+                deleteDir()
+                script {
+                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: "*/${env.promotion_branch_x}"]],
+                            userRemoteConfigs: [[
+                                url: "${env.github_url}",
+                                credentialsId: env.GIT_CREDENTIALS_ID
+                            ]]
+                        ])
+                    }
+                }
+            }
+        }
+
+        stage('Check commits in release_note') {
+            steps {
+                script {
+                    echo "Checking commits in folder: release_note"
+                    def commits = sh(
+                        script: "git log -n 10 --pretty=format:\"%H|%s\" -- helm-charts/${env.higher_env}-values/app-values/release_note/*.xlsx",
+                        returnStdout: true
+                    ).trim()
+                    echo commits
+
+                    def pattern = ~("Verified RN in:" + env.promotion_branch_x)
+
+                    // Declare executePython safely
+                    def executePython = false
+
+                    commits.split('\n').each { line ->
+                        def parts = line.split('\\|', 2)
+                        if (parts.length == 2) {
+                            def commitMsg = parts[1]
+                            echo "Checking commit message: ${commitMsg}"
+                            if ((commitMsg =~ pattern).matches()) {
+                                echo "Found matching commit message: ${commitMsg}"
+                                executePython = true
+                            }
+                        }
+                    }
+
+                    // Set it globally for next stage
+                    env.EXECUTE_PYTHON = executePython.toString()
+                }
+            }
+        }
+
+        stage('Run Python scripts') {
+            when {
+                expression { return env.EXECUTE_PYTHON == 'true' }
+            }
+            steps {
+                script {
+                    withCredentials([
+                        string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')
+                    ]) {
+                        def repoDir = "${WORKSPACE}/zdt-manager-src"
+
+                        // Correct Python script paths
+                        def driftPromotionPath = "${repoDir}/backend/infra/cd/scripts/drift_promotion.py"
+                        def generateConfigPath = "${repoDir}/backend/app/cd/scripts/generate-config.py"
+
+                        // Execute drift_promotion.py
+                        def resultDrift = sh(
+                            script: "${env.PYTHON_EXEC} ${driftPromotionPath} ${env.github_url} ${env.promotion_branch_x} ${env.higher_env}",
+                            returnStdout: true
+                        ).trim()
+                        echo resultDrift
+
+                        // Execute generate-config.py
+                        def resultGen = sh(
+                            script: "${env.PYTHON_EXEC} ${generateConfigPath} ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch_x} ${env.lower_env} ${env.higher_env}",
+                            returnStdout: true
+                        ).trim()
+                        echo resultGen
+
+                        // Check for expected file output
+                        def targetFile = "${WORKSPACE}/helm-charts/${env.higher_env}-values/db-scripts/AQL/${env.higher_env}.txt"
+                        if (fileExists(targetFile)) {
+                            echo "File exists: ${targetFile}"
+                            
+                            // ✅ Include ansible_sparse_execution_cd step
+                            /*
+                            build job: 'ansible_sparse_execution_cd',
+                                parameters: [
+                                    string(name: 'higher_env', value: env.higher_env),
+                                    string(name: 'promotion_branch_x', value: env.promotion_branch_x)
+                                ],
+                                wait: true,
+                                propagate: true
+                        } else {
+                            echo "File does NOT exist: ${targetFile}"
+                        }
+                        */
+
+                        // Optional downstream deploy job (commented)
+                        /*
+                        build job: 'deploy',
+                            parameters: [
+                                string(name: 'env_namespace', value: env.higher_env),
+                                string(name: 'latest_branch', value: env.promotion_branch_x),
+                                string(name: 'repo_url', value: env.github_url)
+                            ],
+                            wait: true
+                        */
+                    }
+                }
+            }
+        }
+
+            stage('Skip Python if commit not matched') {
+                when {
+                    expression { return env.EXECUTE_PYTHON != 'true' }
+                }
+                steps {
+                    echo "No matching commit messages found. Skipping Python script execution."
+                    error("No matching commit message found.")
+                }
+            }
+        }
+    }
+}
