@@ -109,10 +109,10 @@ pipeline {
                                 ],
                                 wait: true,
                                 propagate: true
+                            */
                         } else {
                             echo "File does NOT exist: ${targetFile}"
                         }
-                        */
 
                         // Optional downstream deploy job
                         /*
