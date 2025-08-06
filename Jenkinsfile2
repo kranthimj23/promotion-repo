@@ -150,16 +150,22 @@ pipeline {
         }
 
         stage('Deploy') {
-             when {
+            when {
                 expression { currentBuild.currentResult == 'SUCCESS' }
             }
             steps {
-                echo "Running deploy.py with env: ${env.env_namespace}, repo: ${env.repo_url}, branch: ${env.promotion_branch_x}"
-
-                sh """
-                    gcloud container clusters get-credentials ${CLUSTER} --zone ${ZONE} --project ${PROJECT_ID}
-                    ${PYTHON_EXEC} deploy.py ${env.env_namespace} ${env.repo_url} ${env.promotion_branch_x}
-                """
+                script {
+                    def deployNamespace = env.higher_env
+                    def deployRepoUrl = env.github_url
+                    def deployBranch = env.promotion_branch_x
+        
+                    echo "Deploying with env_namespace=${deployNamespace}, repo_url=${deployRepoUrl}, branch=${deployBranch}"
+        
+                    sh """
+                        gcloud container clusters get-credentials ${CLUSTER} --zone ${ZONE} --project ${PROJECT_ID}
+                        ${PYTHON_EXEC} deploy.py ${deployNamespace} ${deployRepoUrl} ${deployBranch}
+                    """
+                }
             }
         }
     }
