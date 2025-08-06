@@ -6,20 +6,22 @@ pipeline {
         GIT_CREDENTIALS_ID = 'jenkins-token'
     }
 
-    options { skipDefaultCheckout() }
+    options {
+        skipDefaultCheckout()
+    }
 
     stages {
 
-        stage('Checkout with credentials') {
+        stage('Checkout promotion-repo') {
             steps {
                 deleteDir()
                 script {
-                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                    withCredentials([string(credentialsId: env.GIT_CREDENTIALS_ID, variable: 'GIT_TOKEN')]) {
                         checkout([
                             $class: 'GitSCM',
                             branches: [[name: "*/${env.promotion_branch_x}"]],
                             userRemoteConfigs: [[
-                                url: "${env.github_url}",
+                                url: "https://${GIT_TOKEN}@github.com/kranthimj23/promotion-repo.git",
                                 credentialsId: env.GIT_CREDENTIALS_ID
                             ]]
                         ])
@@ -28,11 +30,11 @@ pipeline {
             }
         }
 
-         stage('Checkout zdt-manager-src repo') {
+        stage('Checkout zdt-manager-src repo') {
             steps {
                 dir('zdt-manager-src') {
                     script {
-                        withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                        withCredentials([string(credentialsId: env.GIT_CREDENTIALS_ID, variable: 'GIT_TOKEN')]) {
                             checkout([
                                 $class: 'GitSCM',
                                 branches: [[name: "*/zdt-application"]],
@@ -45,8 +47,6 @@ pipeline {
                 }
             }
         }
-
-
 
         stage('Debug workspace contents') {
             steps {
@@ -62,7 +62,6 @@ pipeline {
                 script {
                     echo "Checking commits in folder: release_note"
 
-                    // Ensure git context is valid
                     if (!fileExists(".git")) {
                         error(".git directory missing — make sure repository checkout was successful.")
                     }
@@ -100,18 +99,20 @@ pipeline {
             steps {
                 script {
                     withCredentials([
-                        string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')
+                        string(credentialsId: env.GIT_CREDENTIALS_ID, variable: 'GIT_TOKEN')
                     ]) {
-                        // def driftPromotionPath = "${WORKSPACE}/zdt-manager-src/backend/infra/cd/scripts/drift_promotion.py"
-                        def generateConfigPath = "${WORKSPACE}/backend/app/cd/scripts/generate-config.py"
+                       // def driftPromotionPath = "${WORKSPACE}/zdt-manager-src/backend/infra/cd/scripts/drift_promotion.py"
+                        def generateConfigPath = "${WORKSPACE}/zdt-manager-src/backend/app/cd/scripts/generate-config.py"
 
-
-                        // echo "Running: ${driftPromotionPath}"
-                        // def resultDrift = sh(
-                        //     script: "${env.PYTHON_EXEC} ${driftPromotionPath} ${env.github_url} ${env.promotion_branch_x} ${env.higher_env}",
-                        //     returnStdout: true
-                        // ).trim()
-                        // echo resultDrift
+                        // Uncomment to run drift_promotion.py
+                        /*
+                        echo "Running: ${driftPromotionPath}"
+                        def resultDrift = sh(
+                            script: "${env.PYTHON_EXEC} ${driftPromotionPath} ${env.github_url} ${env.promotion_branch_x} ${env.higher_env}",
+                            returnStdout: true
+                        ).trim()
+                        echo resultDrift
+                        */
 
                         echo "Running: ${generateConfigPath}"
                         def resultGen = sh(
@@ -124,7 +125,7 @@ pipeline {
                         if (fileExists(targetFile)) {
                             echo "File exists: ${targetFile}"
 
-                            // ✅ ansible_sparse_execution_cd step (currently commented)
+                            // ✅ Optional: ansible_sparse_execution_cd step
                             /*
                             build job: 'ansible_sparse_execution_cd',
                                 parameters: [
@@ -138,7 +139,7 @@ pipeline {
                             echo "File does NOT exist: ${targetFile}"
                         }
 
-                        // Optional downstream deploy job (still commented)
+                        // ✅ Optional: downstream deploy job
                         /*
                         build job: 'deploy',
                             parameters: [
