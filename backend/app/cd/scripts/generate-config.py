@@ -252,22 +252,26 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
  
  
         parsed_value = try_parse_json(he_cur)
- 
+
+        if parsed_value is None:
+            print(f"Skipping row {row_num} due to None parsed_value")
+            continue  # Skip processing this row if parsed_value is None
+
         if service_name in ['data', 'env']:
             handle_data_env(json_data, service_name, change_request, parsed_value)
             continue
- 
+
         # General handling for other services with keys
         key_path = key.split('//')
         obj = json_data.setdefault(service_name, {})
- 
+
         for k in key_path[:-1]:
             if not isinstance(obj, dict):
                 obj = {}
             obj = obj.setdefault(k, {})
- 
+
         final_key = key_path[-1]
- 
+
         if key_path[0] == "env" or (len(key_path) > 1 and key_path[1] == "env"):
             if change_request == 'add':
                 if final_key not in obj:
@@ -275,17 +279,20 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
                 obj[final_key].insert(-1, parsed_value)
                 print(f"Added to '{final_key}' in '{service_name}': {parsed_value}")
             elif change_request == 'modify':
-                for entry in obj[final_key]:
-                    if entry['name'] == parsed_value['name']:
-                        entry['value'] = parsed_value['value']
+                for entry in obj.get(final_key, []):
+                    if isinstance(entry, dict) and entry.get('name') == parsed_value.get('name'):
+                        entry['value'] = parsed_value.get('value')
                         print(f"Modified '{final_key}' entry in '{service_name}': {parsed_value}")
                         break
             elif change_request == 'delete':
-                if final_key in obj:
+                if final_key in obj and parsed_value is not None:
                     print(final_key, obj)
                     print(f"Deleted entry from '{final_key}' in '{service_name}'.")
-                    obj[final_key] = [entry for entry in obj[final_key] if not (isinstance(entry, dict) and 'name' in entry and entry['name'] == parsed_value['name'])]
- 
+                    obj[final_key] = [
+                        entry for entry in obj[final_key]
+                        if not (isinstance(entry, dict) and 'name' in entry and parsed_value is not None and entry['name'] == parsed_value['name'])
+                    ]
+
         else:
             if change_request == 'modify':
                 obj[final_key] = parsed_value
@@ -296,16 +303,16 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
             elif change_request == 'delete' and final_key in obj:
                 del obj[final_key]
                 print(f"Deleted '{final_key}' from '{service_name}'.")
- 
-                # Check for missing or empty value
+
+        # Check for missing or empty value
         if he_cur is None or (isinstance(he_cur, str) and he_cur.strip() == ""):
             if change_request == "delete":
                 continue
             else:
                 raise ValueError(f"Missing or empty value encountered in row {row_num}.")
- 
- 
-    return json_data
+
+        return json_data
+
  
 def extract_hyperlink_path(hyperlink_formula):
     """
