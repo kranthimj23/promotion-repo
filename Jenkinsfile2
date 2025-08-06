@@ -33,6 +33,27 @@ pipeline {
             }
         }
 
+        stage('Checkout main branch') {
+            steps {
+                dir('repo-main') {
+                    deleteDir()
+                    script {
+                        withCredentials([string(credentialsId: env.GIT_CREDENTIALS_ID, variable: 'GIT_TOKEN')]) {
+                            checkout([
+                                $class: 'GitSCM',
+                                branches: [[name: '*/main']],
+                                userRemoteConfigs: [[
+                                    url: "https://${GIT_TOKEN}@github.com/kranthimj23/promotion-repo.git",
+                                    credentialsId: env.GIT_CREDENTIALS_ID
+                                ]]
+                            ])
+                        }
+                    }
+                }
+            }
+        }
+
+
         stage('Checkout zdt-manager-src repo') {
             steps {
                 dir('zdt-manager-src') {
