@@ -33,27 +33,6 @@ pipeline {
             }
         }
 
-        stage('Checkout main branch') {
-            steps {
-                dir('repo-main') {
-                    deleteDir()
-                    script {
-                        withCredentials([string(credentialsId: env.GIT_CREDENTIALS_ID, variable: 'GIT_TOKEN')]) {
-                            checkout([
-                                $class: 'GitSCM',
-                                branches: [[name: '*/main']],
-                                userRemoteConfigs: [[
-                                    url: "https://${GIT_TOKEN}@github.com/kranthimj23/promotion-repo.git",
-                                    credentialsId: env.GIT_CREDENTIALS_ID
-                                ]]
-                            ])
-                        }
-                    }
-                }
-            }
-        }
-
-
         stage('Checkout zdt-manager-src repo') {
             steps {
                 dir('zdt-manager-src') {
@@ -176,6 +155,10 @@ pipeline {
             }
             steps {
                 script {
+                    withCredentials([
+                        string(credentialsId: env.GIT_CREDENTIALS_ID, variable: 'GIT_TOKEN')
+                    ]) {
+                        def deployScriptPath = "${WORKSPACE}/zdt-manager-src/backend/app/cd/scripts/deploy.py"
                     def deployNamespace = env.higher_env
                     def deployRepoUrl = env.github_url
                     def deployBranch = env.promotion_branch_x
@@ -184,7 +167,7 @@ pipeline {
         
                     sh """
                         gcloud container clusters get-credentials ${CLUSTER} --zone ${ZONE} --project ${PROJECT_ID}
-                        ${PYTHON_EXEC} deploy.py ${deployNamespace} ${deployRepoUrl} ${deployBranch}
+                        ${PYTHON_EXEC} deployScriptPath ${deployNamespace} ${deployRepoUrl} ${deployBranch}
                     """
                 }
             }
