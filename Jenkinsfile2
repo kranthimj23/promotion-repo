@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -153,22 +154,23 @@ pipeline {
             when {
                 expression { currentBuild.currentResult == 'SUCCESS' }
             }
-            steps {
-                script {
-                    withCredentials([
-                        string(credentialsId: env.GIT_CREDENTIALS_ID, variable: 'GIT_TOKEN')
-                    ]) {
-                        def deployScriptPath = "${WORKSPACE}/zdt-manager-src/backend/app/cd/scripts/deploy.py"
-                    def deployNamespace = env.higher_env
-                    def deployRepoUrl = env.github_url
-                    def deployBranch = env.promotion_branch_x
-        
-                    echo "Deploying with env_namespace=${deployNamespace}, repo_url=${deployRepoUrl}, branch=${deployBranch}"
-        
-                    sh """
-                        gcloud container clusters get-credentials ${CLUSTER} --zone ${ZONE} --project ${PROJECT_ID}
-                        ${PYTHON_EXEC} deployScriptPath ${deployNamespace} ${deployRepoUrl} ${deployBranch}
-                    """
+                steps {
+                    script {
+                        withCredentials([
+                            string(credentialsId: env.GIT_CREDENTIALS_ID, variable: 'GIT_TOKEN')
+                        ]) {
+                            def deployScriptPath = "${WORKSPACE}/zdt-manager-src/backend/app/cd/scripts/deploy.py"
+                        def deployNamespace = env.higher_env
+                        def deployRepoUrl = env.github_url
+                        def deployBranch = env.promotion_branch_x
+            
+                        echo "Deploying with env_namespace=${deployNamespace}, repo_url=${deployRepoUrl}, branch=${deployBranch}"
+            
+                        sh """
+                            gcloud container clusters get-credentials ${CLUSTER} --zone ${ZONE} --project ${PROJECT_ID}
+                            ${PYTHON_EXEC} deployScriptPath ${deployNamespace} ${deployRepoUrl} ${deployBranch}
+                        """
+                    }
                 }
             }
         }
