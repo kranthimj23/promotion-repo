@@ -143,7 +143,6 @@ pipeline {
                         // }
 
                         // ✅ Optional: downstream deploy job
-                        wait: true,
                                             
                     }
                 }
@@ -151,6 +150,9 @@ pipeline {
         }
 
         stage('Deploy') {
+             when {
+                expression { currentBuild.currentResult == 'SUCCESS' }
+            }
             steps {
                 echo "Running deploy.py with env: ${env.env_namespace}, repo: ${env.repo_url}, branch: ${env.promotion_branch_x}"
 
