@@ -425,30 +425,51 @@ def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, 
  
  
 def update_image_tag(image_str, env_keyword):
-    match = re.match(r'(.+):(.+)', image_str)
-    if not match:
+    """
+    Safely update only the environment part of the image tag (e.g., :14-dev → :14-sit)
+    without affecting the registry domain (e.g., .pkg.dev).
+    """
+    if not isinstance(image_str, str) or ":" not in image_str:
         return image_str
-    image_repo, tag = match.groups()
-    tag_parts = tag.split('-')
-    if len(tag_parts) < 3:
-        return image_str
-    updated_tag = '-'.join(tag_parts[:2] + [env_keyword])
-    return f"{image_repo}:{updated_tag}"
- 
+
+    image_repo, tag = image_str.rsplit(":", 1)
+    tag_parts = tag.split("-")
+
+    if len(tag_parts) < 2:
+        return image_str  # no env suffix found
+
+    # Replace last part (env) with new one
+    tag_parts[-1] = env_keyword
+    new_tag = "-".join(tag_parts)
+
+    return f"{image_repo}:{new_tag}"
+
+
 def update_image_repo_in_json_string(json_str, env_keyword):
+    """
+    Parse a JSON string and update imageName, image_name, and tag values safely.
+    """
     try:
         data = json.loads(json_str)
     except json.JSONDecodeError:
         return json_str  # return as-is if not a valid JSON
- 
-    if isinstance(data, dict):
-        image_obj = data.get('image', {})
-        if isinstance(image_obj, dict) and 'image_name' in image_obj:
+
+    if not isinstance(data, dict):
+        return json_str
+
+    image_obj = data.get('image', {})
+    if isinstance(image_obj, dict):
+        # Update both camelCase and snake_case keys
+        if 'imageName' in image_obj:
+            image_obj['imageName'] = update_image_tag(image_obj['imageName'], env_keyword)
+        if 'image_name' in image_obj:
             image_obj['image_name'] = update_image_tag(image_obj['image_name'], env_keyword)
-            data['image'] = image_obj
-            return json.dumps(data, indent=4)
- 
-    return json_str
+        if 'tag' in image_obj:
+            image_obj['tag'] = update_image_tag(image_obj['tag'], env_keyword)
+
+        data['image'] = image_obj
+
+    return json.dumps(data, indent=4)
  
  
 def write_changes_to_excel(changes, release_note_path, envs,env_list):
