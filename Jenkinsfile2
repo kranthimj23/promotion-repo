@@ -28,6 +28,27 @@ pipeline {
             }
         }
 
+         stage('Checkout zdt-manager-src repo') {
+            steps {
+                dir('zdt-manager-src') {
+                    script {
+                        withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                            checkout([
+                                $class: 'GitSCM',
+                                branches: [[name: "*/zdt-application"]],
+                                userRemoteConfigs: [[
+                                    url: "https://${GIT_TOKEN}@github.com/kranthimj23/zdt-manager-src.git"
+                                    credentialsId: env.GIT_CREDENTIALS_ID
+                                ]]
+                            ])
+                        }
+                    }
+                }
+            }
+        }
+
+
+
         stage('Debug workspace contents') {
             steps {
                 script {
@@ -82,10 +103,9 @@ pipeline {
                     withCredentials([
                         string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')
                     ]) {
-                        def repoDir = "${WORKSPACE}"  // Repo checked out directly here
+                        def driftPromotionPath = "${WORKSPACE}/zdt-manager-src/backend/infra/cd/scripts/drift_promotion.py"
+                        def generateConfigPath = "${WORKSPACE}/backend/app/cd/scripts/generate-config.py"
 
-                        def driftPromotionPath = "${repoDir}/backend/infra/cd/scripts/drift_promotion.py"
-                        def generateConfigPath = "${repoDir}/backend/app/cd/scripts/generate-config.py"
 
                         echo "Running: ${driftPromotionPath}"
                         def resultDrift = sh(
