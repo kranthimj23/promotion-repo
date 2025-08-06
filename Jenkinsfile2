@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         PYTHON_EXEC = 'python3.11'
-        GIT_CREDENTIALS_ID = credentials('jenkins-token')
+        GIT_CREDENTIALS_ID = 'jenkins-token'
     }
 
     options { skipDefaultCheckout() }
@@ -15,15 +15,16 @@ pipeline {
                 deleteDir()
                 script {
                     withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
-                        checkout([
-                            $class: 'GitSCM',
-                            branches: [[name: "*/${env.promotion_branch_x}"]],
-                            userRemoteConfigs: [[
-                                url: "${env.github_url}",
-                                credentialsId: env.GIT_CREDENTIALS_ID
-                            ]],
-                            extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'zdt-manager-src']]
-                        ])
+                        dir('zdt-manager-src') {
+                            checkout([
+                                $class: 'GitSCM',
+                                branches: [[name: "*/${env.promotion_branch_x}"]],
+                                userRemoteConfigs: [[
+                                    url: "${env.github_url}",
+                                    credentialsId: env.GIT_CREDENTIALS_ID
+                                ]]
+                            ])
+                        }
                     }
                 }
             }
@@ -31,30 +32,38 @@ pipeline {
 
         stage('Check commits in release_note') {
             steps {
-                script {
-                    echo "Checking commits in folder: release_note"
-                    def commits = sh(
-                        script: "git log -n 10 --pretty=format:\"%H|%s\" -- helm-charts/${env.higher_env}-values/app-values/release_note/*.xlsx",
-                        returnStdout: true
-                    ).trim()
-                    echo commits
+                dir('zdt-manager-src') {
+                    script {
+                        echo "Checking commits in folder: release_note"
 
-                    def pattern = ~("Verified RN in:" + env.promotion_branch_x)
-                    def executePython = false
+                        // Ensure git context is valid
+                        if (!fileExists(".git")) {
+                            error(".git directory missing — make sure repository checkout was successful.")
+                        }
 
-                    commits.split('\n').each { line ->
-                        def parts = line.split('\\|', 2)
-                        if (parts.length == 2) {
-                            def commitMsg = parts[1]
-                            echo "Checking commit message: ${commitMsg}"
-                            if ((commitMsg =~ pattern).matches()) {
-                                echo "Found matching commit message: ${commitMsg}"
-                                executePython = true
+                        def commits = sh(
+                            script: "git log -n 10 --pretty=format:\"%H|%s\" -- helm-charts/${env.higher_env}-values/app-values/release_note/*.xlsx",
+                            returnStdout: true
+                        ).trim()
+                        echo commits
+
+                        def pattern = ~("Verified RN in:" + env.promotion_branch_x)
+                        def executePython = false
+
+                        commits.split('\n').each { line ->
+                            def parts = line.split('\\|', 2)
+                            if (parts.length == 2) {
+                                def commitMsg = parts[1]
+                                echo "Checking commit message: ${commitMsg}"
+                                if ((commitMsg =~ pattern).matches()) {
+                                    echo "Found matching commit message: ${commitMsg}"
+                                    executePython = true
+                                }
                             }
                         }
-                    }
 
-                    env.EXECUTE_PYTHON = executePython.toString()
+                        env.EXECUTE_PYTHON = executePython.toString()
+                    }
                 }
             }
         }
@@ -73,12 +82,14 @@ pipeline {
                         def driftPromotionPath = "${repoDir}/backend/infra/cd/scripts/drift_promotion.py"
                         def generateConfigPath = "${repoDir}/backend/app/cd/scripts/generate-config.py"
 
+                        echo "Running: ${driftPromotionPath}"
                         def resultDrift = sh(
                             script: "${env.PYTHON_EXEC} ${driftPromotionPath} ${env.github_url} ${env.promotion_branch_x} ${env.higher_env}",
                             returnStdout: true
                         ).trim()
                         echo resultDrift
 
+                        echo "Running: ${generateConfigPath}"
                         def resultGen = sh(
                             script: "${env.PYTHON_EXEC} ${generateConfigPath} ${env.github_url} ${env.promotion_branch_x_1} ${env.promotion_branch_x} ${env.lower_env} ${env.higher_env}",
                             returnStdout: true
@@ -89,7 +100,7 @@ pipeline {
                         if (fileExists(targetFile)) {
                             echo "File exists: ${targetFile}"
 
-                            // ✅ ansible_sparse_execution_cd step (currently commented)
+                            // ✅ Re-enabled ansible_sparse_execution_cd step
                             /*
                             build job: 'ansible_sparse_execution_cd',
                                 parameters: [
@@ -98,12 +109,12 @@ pipeline {
                                 ],
                                 wait: true,
                                 propagate: true
-                            */
                         } else {
                             echo "File does NOT exist: ${targetFile}"
                         }
+                        */
 
-                        // Optional downstream deploy job (still commented)
+                        // Optional downstream deploy job
                         /*
                         build job: 'deploy',
                             parameters: [
@@ -115,16 +126,6 @@ pipeline {
                         */
                     }
                 }
-            }
-        }
-
-        stage('Skip Python if commit not matched') {
-            when {
-                expression { return env.EXECUTE_PYTHON != 'true' }
-            }
-            steps {
-                echo "No matching commit messages found. Skipping Python script execution."
-                error("No matching commit message found.")
             }
         }
     }
