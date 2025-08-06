@@ -102,16 +102,16 @@ pipeline {
                     withCredentials([
                         string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')
                     ]) {
-                        def driftPromotionPath = "${WORKSPACE}/zdt-manager-src/backend/infra/cd/scripts/drift_promotion.py"
+                        // def driftPromotionPath = "${WORKSPACE}/zdt-manager-src/backend/infra/cd/scripts/drift_promotion.py"
                         def generateConfigPath = "${WORKSPACE}/backend/app/cd/scripts/generate-config.py"
 
 
-                        echo "Running: ${driftPromotionPath}"
-                        def resultDrift = sh(
-                            script: "${env.PYTHON_EXEC} ${driftPromotionPath} ${env.github_url} ${env.promotion_branch_x} ${env.higher_env}",
-                            returnStdout: true
-                        ).trim()
-                        echo resultDrift
+                        // echo "Running: ${driftPromotionPath}"
+                        // def resultDrift = sh(
+                        //     script: "${env.PYTHON_EXEC} ${driftPromotionPath} ${env.github_url} ${env.promotion_branch_x} ${env.higher_env}",
+                        //     returnStdout: true
+                        // ).trim()
+                        // echo resultDrift
 
                         echo "Running: ${generateConfigPath}"
                         def resultGen = sh(
