@@ -4,6 +4,9 @@ pipeline {
     environment {
         PYTHON_EXEC = 'python3.11'
         GIT_CREDENTIALS_ID = 'jenkins-token'
+        PROJECT_ID = 'nice-virtue-463917-m0'
+        CLUSTER = 'autopilot-cluster-1'
+        ZONE = 'asia-southeast1'
     }
 
     options {
@@ -121,36 +124,40 @@ pipeline {
                         ).trim()
                         echo resultGen
 
-                        def targetFile = "${WORKSPACE}/helm-charts/${env.higher_env}-values/db-scripts/AQL/${env.higher_env}.txt"
-                        if (fileExists(targetFile)) {
-                            echo "File exists: ${targetFile}"
+                        // def targetFile = "${WORKSPACE}/helm-charts/${env.higher_env}-values/db-scripts/AQL/${env.higher_env}.txt"
+                        // if (fileExists(targetFile)) {
+                        //     echo "File exists: ${targetFile}"
 
-                            // ✅ Optional: ansible_sparse_execution_cd step
-                            /*
-                            build job: 'ansible_sparse_execution_cd',
-                                parameters: [
-                                    string(name: 'higher_env', value: env.higher_env),
-                                    string(name: 'promotion_branch_x', value: env.promotion_branch_x)
-                                ],
-                                wait: true,
-                                propagate: true
-                            */
-                        } else {
-                            echo "File does NOT exist: ${targetFile}"
-                        }
+                        //     // ✅ Optional: ansible_sparse_execution_cd step
+                        //     /*
+                        //     build job: 'ansible_sparse_execution_cd',
+                        //         parameters: [
+                        //             string(name: 'higher_env', value: env.higher_env),
+                        //             string(name: 'promotion_branch_x', value: env.promotion_branch_x)
+                        //         ],
+                        //         wait: true,
+                        //         propagate: true
+                        //     */
+                        // } else {
+                        //     echo "File does NOT exist: ${targetFile}"
+                        // }
 
                         // ✅ Optional: downstream deploy job
-                        
-                        build job: 'deploy',
-                            parameters: [
-                                string(name: 'env_namespace', value: env.higher_env),
-                                string(name: 'latest_branch', value: env.promotion_branch_x),
-                                string(name: 'repo_url', value: env.github_url)
-                            ],
-                            wait: true
-                        
+                        wait: true,
+                                            
                     }
                 }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo "Running deploy.py with env: ${env.env_namespace}, repo: ${env.repo_url}, branch: ${env.promotion_branch_x}"
+
+                sh """
+                    gcloud container clusters get-credentials ${CLUSTER} --zone ${ZONE} --project ${PROJECT_ID}
+                    ${PYTHON_EXEC} deploy.py ${env.env_namespace} ${env.repo_url} ${env.promotion_branch_x}
+                """
             }
         }
     }
