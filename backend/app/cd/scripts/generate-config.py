@@ -340,13 +340,16 @@ def process_json_data(data):
 def create_yaml_files_from_json(updated_output_file, output_folder):
     with open(updated_output_file, 'r') as json_file:
         json_data = json.load(json_file)
- 
+
+    if not json_data:
+        raise ValueError(f"JSON file {updated_output_file} is empty or invalid.")
+
     os.makedirs(output_folder, exist_ok=True)
- 
+
     for root_object, data in json_data.items():
         yaml_file_path = os.path.join(output_folder, f"{root_object}.yaml")
         processed_data = process_json_data(data)
- 
+
         with open(yaml_file_path, 'w') as yaml_file:
             yaml.dump(processed_data, yaml_file, default_flow_style=False, sort_keys=False)
  
