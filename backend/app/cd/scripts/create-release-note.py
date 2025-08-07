@@ -62,16 +62,16 @@ def copy_missing_yaml_files(higher_env_x_1, lower_env_x, lower_env, higher_env):
  
         try:
             with open(destination_path, 'r') as file:
-                file_content = file.read()  # Read the entire file into a string [1][2]
- 
-            # Replace the string
-            updated_content = safe_env_replace(updated_content, 'dev', 'sit') # Replace occurrences of the le_old string with the new string [2][3][4]
+                file_content = file.read()
+
+            # ✅ Now pass file_content to safe_env_replace
+            updated_content = safe_env_replace(file_content, lower_env, higher_env)
 
             print("[DEBUG] YAML after safe_env_replace:")
             print(updated_content)
- 
+
             with open(destination_path, 'w') as file:
-                file.write(updated_content)  # Write the updated content back to the file [2]
+                file.write(updated_content) # Write the updated content back to the file [2]
  
             # print(f"Successfully replaced '{lower_env}' with '{higher_env}' in '{filename}'.")
  
