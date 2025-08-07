@@ -327,8 +327,13 @@ def extract_hyperlink_path(hyperlink_formula):
  
 def save_json_to_file(json_data, output_file):
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    print(f"[DEBUG] Saving JSON to: {output_file}")
+    print("[DEBUG] JSON content to write:\n", json.dumps(json_data, indent=4))  # just log it
+
     with open(output_file, 'w') as f:
         json.dump(json_data, f, indent=4)
+
  
 def process_json_data(data):
     if isinstance(data, list):
