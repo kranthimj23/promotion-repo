@@ -645,14 +645,13 @@ def fetch_branches(repo_url, lower_env, higher_env):
 def main():
  
     repos_info = {
-        'mb-helmcharts': sys.argv[1]
+        'promotion-repo': sys.argv[1]
     }
  
     lower_env = sys.argv[4]
     higher_env = sys.argv[5]
  
     # promote_branch_x, promote_branch_x_1 = fetch_branches(sys.argv[1],lower_env, higher_env)
- 
  
  
     for repo_name, repo_url in repos_info.items():
