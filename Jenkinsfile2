@@ -52,14 +52,6 @@ pipeline {
             }
         }
 
-        stage('Debug workspace contents') {
-            steps {
-                script {
-                    echo "Listing workspace files recursively:"
-                    sh 'ls -R'
-                }
-            }
-        }
 
         stage('Check commits in release_note') {
             steps {
