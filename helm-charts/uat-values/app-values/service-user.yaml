@@ -11,7 +11,7 @@ env:
 image:
   imageName: asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-user/user:48-uat
   pullPolicy: IfNotPresent
-  repouatory: asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-user/user
+  repository: asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-user/user
   tag: 48-uat
 replicaCount: 1
 resources:
