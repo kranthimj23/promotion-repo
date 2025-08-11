@@ -252,26 +252,22 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
  
  
         parsed_value = try_parse_json(he_cur)
-
-        if parsed_value is None:
-            print(f"Skipping row {row_num} due to None parsed_value")
-            continue  # Skip processing this row if parsed_value is None
-
+ 
         if service_name in ['data', 'env']:
             handle_data_env(json_data, service_name, change_request, parsed_value)
             continue
-
+ 
         # General handling for other services with keys
         key_path = key.split('//')
         obj = json_data.setdefault(service_name, {})
-
+ 
         for k in key_path[:-1]:
             if not isinstance(obj, dict):
                 obj = {}
             obj = obj.setdefault(k, {})
-
+ 
         final_key = key_path[-1]
-
+ 
         if key_path[0] == "env" or (len(key_path) > 1 and key_path[1] == "env"):
             if change_request == 'add':
                 if final_key not in obj:
@@ -279,20 +275,17 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
                 obj[final_key].insert(-1, parsed_value)
                 print(f"Added to '{final_key}' in '{service_name}': {parsed_value}")
             elif change_request == 'modify':
-                for entry in obj.get(final_key, []):
-                    if isinstance(entry, dict) and entry.get('name') == parsed_value.get('name'):
-                        entry['value'] = parsed_value.get('value')
+                for entry in obj[final_key]:
+                    if entry['name'] == parsed_value['name']:
+                        entry['value'] = parsed_value['value']
                         print(f"Modified '{final_key}' entry in '{service_name}': {parsed_value}")
                         break
             elif change_request == 'delete':
-                if final_key in obj and parsed_value is not None:
+                if final_key in obj:
                     print(final_key, obj)
                     print(f"Deleted entry from '{final_key}' in '{service_name}'.")
-                    obj[final_key] = [
-                        entry for entry in obj[final_key]
-                        if not (isinstance(entry, dict) and 'name' in entry and parsed_value is not None and entry['name'] == parsed_value['name'])
-                    ]
-
+                    obj[final_key] = [entry for entry in obj[final_key] if not (isinstance(entry, dict) and 'name' in entry and entry['name'] == parsed_value['name'])]
+ 
         else:
             if change_request == 'modify':
                 obj[final_key] = parsed_value
@@ -303,16 +296,16 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
             elif change_request == 'delete' and final_key in obj:
                 del obj[final_key]
                 print(f"Deleted '{final_key}' from '{service_name}'.")
-
-        # Check for missing or empty value
+ 
+                # Check for missing or empty value
         if he_cur is None or (isinstance(he_cur, str) and he_cur.strip() == ""):
             if change_request == "delete":
                 continue
             else:
                 raise ValueError(f"Missing or empty value encountered in row {row_num}.")
-
-        return json_data
-
+ 
+ 
+    return json_data
  
 def extract_hyperlink_path(hyperlink_formula):
     """
@@ -327,13 +320,8 @@ def extract_hyperlink_path(hyperlink_formula):
  
 def save_json_to_file(json_data, output_file):
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
-    print(f"[DEBUG] Saving JSON to: {output_file}")
-    print("[DEBUG] JSON content to write:\n", json.dumps(json_data, indent=4))  # just log it
-
     with open(output_file, 'w') as f:
         json.dump(json_data, f, indent=4)
-
  
 def process_json_data(data):
     if isinstance(data, list):
@@ -345,16 +333,13 @@ def process_json_data(data):
 def create_yaml_files_from_json(updated_output_file, output_folder):
     with open(updated_output_file, 'r') as json_file:
         json_data = json.load(json_file)
-
-    if not json_data:
-        raise ValueError(f"JSON file {updated_output_file} is empty or invalid.")
-
+ 
     os.makedirs(output_folder, exist_ok=True)
-
+ 
     for root_object, data in json_data.items():
         yaml_file_path = os.path.join(output_folder, f"{root_object}.yaml")
         processed_data = process_json_data(data)
-
+ 
         with open(yaml_file_path, 'w') as yaml_file:
             yaml.dump(processed_data, yaml_file, default_flow_style=False, sort_keys=False)
  
@@ -645,13 +630,14 @@ def fetch_branches(repo_url, lower_env, higher_env):
 def main():
  
     repos_info = {
-        'promotion-repo': sys.argv[1]
+        'mb-helmcharts': sys.argv[1]
     }
  
     lower_env = sys.argv[4]
     higher_env = sys.argv[5]
  
     # promote_branch_x, promote_branch_x_1 = fetch_branches(sys.argv[1],lower_env, higher_env)
+ 
  
  
     for repo_name, repo_url in repos_info.items():
