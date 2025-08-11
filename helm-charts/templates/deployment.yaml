@@ -58,7 +58,6 @@ spec:
             {{- with .Values.env.service_user }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
-            {{- end}}
             
             
             - name: {{ $env.name }}
