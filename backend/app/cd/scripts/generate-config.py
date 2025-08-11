@@ -735,7 +735,7 @@ def main():
             apply_sed_to_yaml(output_folder)
             create_txt_file(excel_file_path,sheet,txt_file_path)
             # update_txt_file_with_yaml_values(txt_file_path,image_tag_file_path,output_folder)
-            update_image_registry_in_yaml(output_folder, "asia-south1-docker.pkg.sit", "asia-south1-docker.pkg.dev")
+            update_image_registry_in_yaml(output_folder, f"asia-south1-docker.pkg.{higher_env}", "asia-south1-docker.pkg.dev")
  
     try:
         subprocess.run(['git', 'add', "."], cwd =target_folder_x, check=True, capture_output=True, text=True)
