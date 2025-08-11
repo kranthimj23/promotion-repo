@@ -43,6 +43,23 @@ spec:
               {{- toYaml . | nindent 12 }}
             {{- end }}
             {{- end}}
+            {{- with .Values.env.data }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.env.env }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.env.service_admin }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.env.service_auth }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.env.service_user }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- end}}
+            
             
             - name: {{ $env.name }}
               value: "{{ $env.value }}"
