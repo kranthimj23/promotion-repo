@@ -171,6 +171,51 @@ def insert_hardcoded_value(folder,service_list):
         file.write(modified_text)
  
     return modified_text
+
+
+def update_image_registry_in_yaml(folder_path, old_registry, new_registry):
+    """
+    Update image registry in all YAML files within a folder if 'serviceName' exists.
+
+    Args:
+        folder_path (str): Path to the folder containing YAML files.
+        old_registry (str): The registry string to replace.
+        new_registry (str): The registry string to replace it with.
+    """
+    if not os.path.exists(folder_path):
+        print(f"❌ Error: Folder '{folder_path}' does not exist.")
+        return
+
+    for file_name in os.listdir(folder_path):
+        if file_name.endswith(".yaml"):
+            file_path = os.path.join(folder_path, file_name)
+
+            try:
+                with open(file_path, "r") as f:
+                    data = yaml.safe_load(f)
+
+                # Skip if no serviceName present
+                if not isinstance(data, dict) or "serviceName" not in data:
+                    continue
+
+                updated = False
+
+                # Update imageName if exists
+                if "image" in data and isinstance(data["image"], dict):
+                    for key in ["imageName", "repository"]:
+                        if key in data["image"] and isinstance(data["image"][key], str):
+                            if old_registry in data["image"][key]:
+                                data["image"][key] = data["image"][key].replace(old_registry, new_registry)
+                                updated = True
+
+                # Save changes if any
+                if updated:
+                    with open(file_path, "w") as f:
+                        yaml.safe_dump(data, f, sort_keys=False)
+                    print(f"✅ Updated registry in: {file_name}")
+
+            except Exception as e:
+                print(f"⚠ Error processing {file_name}: {e}")    
  
  
  
@@ -690,6 +735,7 @@ def main():
             apply_sed_to_yaml(output_folder)
             create_txt_file(excel_file_path,sheet,txt_file_path)
             # update_txt_file_with_yaml_values(txt_file_path,image_tag_file_path,output_folder)
+            update_image_registry_in_yaml(output_folder, "asia-south1-docker.pkg.sit", "asia-south1-docker.pkg.dev")
  
     try:
         subprocess.run(['git', 'add', "."], cwd =target_folder_x, check=True, capture_output=True, text=True)
