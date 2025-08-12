@@ -342,9 +342,35 @@ def yaml_to_json(folder_path):
  
  
 def dump_and_replace(json_obj, lower_env, higher_env):
+    """
+    Safely replace environment names in JSON data
+    without touching domain names or unrelated words.
+    Only replaces in:
+      - Docker image tags (e.g., :14-dev → :14-sit)
+      - YAML 'tag:' fields
+    """
     json_str = json.dumps(json_obj, indent=4)
-    replaced_str = json_str.replace(lower_env, higher_env)
-    return replaced_str
+
+    # Pattern 1: Replace in docker tags like :14-dev
+    json_str = re.sub(
+        rf'(:[0-9A-Za-z_.-]+-){lower_env}(\b)',
+        rf'\1{higher_env}',
+        json_str
+    )
+
+    # Pattern 2: Replace in YAML/JSON tag fields: "tag": "14-dev"
+    json_str = re.sub(
+        rf'("tag"\s*:\s*"[0-9A-Za-z_.-]+-){lower_env}(\b)',
+        rf'\1{higher_env}',
+        json_str
+    )
+
+    # Return as string (so caller can write to file) or back to dict if needed
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        # If not valid JSON after replacement (might be YAML later), return string
+        return json_str
  
  
  
