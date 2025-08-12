@@ -171,51 +171,6 @@ def insert_hardcoded_value(folder,service_list):
         file.write(modified_text)
  
     return modified_text
-
-
-def update_image_registry_in_yaml(folder_path, old_registry, new_registry):
-    """
-    Update image registry in all YAML files within a folder if 'serviceName' exists.
-
-    Args:
-        folder_path (str): Path to the folder containing YAML files.
-        old_registry (str): The registry string to replace.
-        new_registry (str): The registry string to replace it with.
-    """
-    if not os.path.exists(folder_path):
-        print(f"❌ Error: Folder '{folder_path}' does not exist.")
-        return
-
-    for file_name in os.listdir(folder_path):
-        if file_name.endswith(".yaml"):
-            file_path = os.path.join(folder_path, file_name)
-
-            try:
-                with open(file_path, "r") as f:
-                    data = yaml.safe_load(f)
-
-                # Skip if no serviceName present
-                if not isinstance(data, dict) or "serviceName" not in data:
-                    continue
-
-                updated = False
-
-                # Update imageName if exists
-                if "image" in data and isinstance(data["image"], dict):
-                    for key in ["imageName", "repository"]:
-                        if key in data["image"] and isinstance(data["image"][key], str):
-                            if old_registry in data["image"][key]:
-                                data["image"][key] = data["image"][key].replace(old_registry, new_registry)
-                                updated = True
-
-                # Save changes if any
-                if updated:
-                    with open(file_path, "w") as f:
-                        yaml.safe_dump(data, f, sort_keys=False)
-                    print(f"✅ Updated registry in: {file_name}")
-
-            except Exception as e:
-                print(f"⚠ Error processing {file_name}: {e}")    
  
  
  
@@ -297,22 +252,26 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
  
  
         parsed_value = try_parse_json(he_cur)
- 
+
+        if parsed_value is None:
+            print(f"Skipping row {row_num} due to None parsed_value")
+            continue  # Skip processing this row if parsed_value is None
+
         if service_name in ['data', 'env']:
             handle_data_env(json_data, service_name, change_request, parsed_value)
             continue
- 
+
         # General handling for other services with keys
         key_path = key.split('//')
         obj = json_data.setdefault(service_name, {})
- 
+
         for k in key_path[:-1]:
             if not isinstance(obj, dict):
                 obj = {}
             obj = obj.setdefault(k, {})
- 
+
         final_key = key_path[-1]
- 
+
         if key_path[0] == "env" or (len(key_path) > 1 and key_path[1] == "env"):
             if change_request == 'add':
                 if final_key not in obj:
@@ -326,11 +285,14 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
                         print(f"Modified '{final_key}' entry in '{service_name}': {parsed_value}")
                         break
             elif change_request == 'delete':
-                if final_key in obj:
+                if final_key in obj and parsed_value is not None:
                     print(final_key, obj)
                     print(f"Deleted entry from '{final_key}' in '{service_name}'.")
-                    obj[final_key] = [entry for entry in obj[final_key] if not (isinstance(entry, dict) and 'name' in entry and entry['name'] == parsed_value['name'])]
- 
+                    obj[final_key] = [
+                        entry for entry in obj[final_key]
+                        if not (isinstance(entry, dict) and 'name' in entry and parsed_value is not None and entry['name'] == parsed_value['name'])
+                    ]
+
         else:
             if change_request == 'modify':
                 obj[final_key] = parsed_value
@@ -341,16 +303,16 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
             elif change_request == 'delete' and final_key in obj:
                 del obj[final_key]
                 print(f"Deleted '{final_key}' from '{service_name}'.")
- 
-                # Check for missing or empty value
+
+        # Check for missing or empty value
         if he_cur is None or (isinstance(he_cur, str) and he_cur.strip() == ""):
             if change_request == "delete":
                 continue
             else:
                 raise ValueError(f"Missing or empty value encountered in row {row_num}.")
- 
- 
+
     return json_data
+
  
 def extract_hyperlink_path(hyperlink_formula):
     """
@@ -447,24 +409,44 @@ def apply_sed_to_yaml(folder_path):
             except subprocess.CalledProcessError as e:
                 print(f"Error processing {file_name}: {e}")
  
+# def modify_deployment_yaml(folder, deleted_services):
+#     """
+#     Modifies the deployment.yaml file by removing the env blocks corresponding to deleted services.
+#     """
+#     temp_path = os.path.join(folder, "helm-charts","templates", "deployment.yaml")
+ 
+#     """Removes the specified service blocks from the env section of the deployment.yaml."""
+#     for service in deleted_services:
+#         service = service.replace('-', '_')
+#         pattern = rf"{{- with \.Values\.env\.{service} }}"
+ 
+#         sed_command = [
+#             "sed",
+#             "-i.bak",
+#             rf"/{pattern}/,+2d",
+#             temp_path,
+#         ]
+#         result = subprocess.run(sed_command, capture_output=True, text=True, timeout=30)
+
+
 def modify_deployment_yaml(folder, deleted_services):
     """
-    Modifies the deployment.yaml file by removing the env blocks corresponding to deleted services.
+    Remove entire {{ with .Values.env.service }} ... {{ end }} blocks
+    from deployment.yaml for deleted services.
     """
-    temp_path = os.path.join(folder, "helm-charts","templates", "deployment.yaml")
- 
-    """Removes the specified service blocks from the env section of the deployment.yaml."""
+    temp_path = os.path.join(folder, "helm-charts", "templates", "deployment.yaml")
+
+    with open(temp_path, "r") as f:
+        yaml_text = f.read()
+
     for service in deleted_services:
-        service = service.replace('-', '_')
-        pattern = rf"{{- with \.Values\.env\.{service} }}"
- 
-        sed_command = [
-            "sed",
-            "-i.bak",
-            rf"/{pattern}/,+2d",
-            temp_path,
-        ]
-        result = subprocess.run(sed_command, capture_output=True, text=True, timeout=30)
+        service_name = service.replace("-", "_")
+        # Match everything from `with` line to matching `{{- end }}` on its own line
+        pattern = rf"{{- with \.Values\.env\.{service_name} }}[\s\S]*?{{- end }}"
+        yaml_text = re.sub(pattern, "", yaml_text)
+
+    with open(temp_path, "w") as f:
+        f.write(yaml_text)
  
 def create_txt_file(excel_path, env, txt_path):
     wb = openpyxl.load_workbook(excel_path)
@@ -675,14 +657,13 @@ def fetch_branches(repo_url, lower_env, higher_env):
 def main():
  
     repos_info = {
-        'mb-helmcharts': sys.argv[1]
+        'promotion-repo': sys.argv[1]
     }
  
     lower_env = sys.argv[4]
     higher_env = sys.argv[5]
  
     # promote_branch_x, promote_branch_x_1 = fetch_branches(sys.argv[1],lower_env, higher_env)
- 
  
  
     for repo_name, repo_url in repos_info.items():
@@ -735,7 +716,6 @@ def main():
             apply_sed_to_yaml(output_folder)
             create_txt_file(excel_file_path,sheet,txt_file_path)
             # update_txt_file_with_yaml_values(txt_file_path,image_tag_file_path,output_folder)
-            update_image_registry_in_yaml(output_folder, f"asia-south1-docker.pkg.{higher_env}", "asia-south1-docker.pkg.dev")
  
     try:
         subprocess.run(['git', 'add', "."], cwd =target_folder_x, check=True, capture_output=True, text=True)
