@@ -525,13 +525,21 @@ def update_image_repo_in_json_string(json_str_or_obj, env_keyword):
 
     # Return the updated JSON as pretty string
     return json.dumps(data, indent=4)
- 
- 
-def write_changes_to_excel(changes, release_note_path, envs,env_list):
+
+
+def write_changes_to_excel(changes, release_note_path, envs, env_list):
     if not changes:
         print("No differences found; skipping the creation of release note.")
         return
- 
+
+    # Helper to safely convert dicts to JSON strings for Excel
+    def safe_excel_value(val):
+        if isinstance(val, dict):
+            return json.dumps(val)
+        if val is None:
+            return ''
+        return val
+
     # Constant part of the filename
     base_filename = "release-note"
     # Get the current date and time
@@ -541,51 +549,121 @@ def write_changes_to_excel(changes, release_note_path, envs,env_list):
     # Create the complete filename
     excel_file = f"{base_filename}-{date_time_str}.xlsx"
     excel_file_path = os.path.join(release_note_path, excel_file)
- 
+
     # Check if the file exists
     if os.path.exists(excel_file_path):
         wb = load_workbook(excel_file_path)
     else:
         wb = Workbook()
- 
+
     ws = wb.active
     ws.title = envs[1]  # Name the first sheet
- 
+
     ws.append([
         'Service name', 'Change Request', 'Key', f'{envs[0]}-current value', f'{envs[0]}-previous value', f'{envs[1]}-current value', f'{envs[1]}-previous value','Comment'])
- 
+
     # Write the changes for the environment
     for change in changes:
         print(change)
         service_name, change_type, key, le_cur, le_prev, he_cur, he_prev, comment = change
- 
+
         # 🔄 If key is image//repository, update he_cur with transformed tag
         if key == 'image//image_name':
             he_cur = update_image_tag(he_cur, envs[1])  # replace after 2nd hyphen
- 
+
         # 🧠 Scenario 2: Root object with embedded image.repository
         elif isinstance(comment, str) and comment.strip().lower() == 'root object added':
             he_cur = update_image_repo_in_json_string(he_cur, envs[1])
- 
+
         # Check if value exceeds 32,767 characters
-        if len(le_cur) > 32767:
+        if isinstance(le_cur, str) and len(le_cur) > 32767:
             # Save large data to a text file
             txt_file_name = f"{service_name}.txt"
             txt_file_path = os.path.join(release_note_path, txt_file_name)
             with open(txt_file_path, 'w') as txt_file:
                 txt_file.write(le_cur)
- 
+
             # Format path for hyperlink (absolute path)
             txt_file_path_linked = f'file:///{os.path.abspath(txt_file_path)}'.replace(' ', '%20')
- 
+
             # Create a hyperlink in Excel pointing to this text file
-            ws.append([service_name,change_type,key,f'=HYPERLINK("{txt_file_path_linked}")','','','',comment])
+            ws.append([service_name, change_type, key, f'=HYPERLINK("{txt_file_path_linked}")', '', '', '', comment])
         else:
             # Append new changes directly to the relevant sheet
-            ws.append([service_name, change_type, key, le_cur, le_prev, he_cur, he_prev, comment])
- 
+            ws.append([
+                service_name,
+                change_type,
+                key,
+                safe_excel_value(le_cur),
+                safe_excel_value(le_prev),
+                safe_excel_value(he_cur),
+                safe_excel_value(he_prev),
+                comment
+            ])
+
     # Save the updated workbook
-    wb.save(excel_file_path)
+    wb.save(excel_file_path)    
+ 
+ 
+# def write_changes_to_excel(changes, release_note_path, envs,env_list):
+#     if not changes:
+#         print("No differences found; skipping the creation of release note.")
+#         return
+ 
+#     # Constant part of the filename
+#     base_filename = "release-note"
+#     # Get the current date and time
+#     now = datetime.datetime.now()
+#     # Format the date and time as a string
+#     date_time_str = now.strftime("%d-%b-%Y-%H-%M-%S")
+#     # Create the complete filename
+#     excel_file = f"{base_filename}-{date_time_str}.xlsx"
+#     excel_file_path = os.path.join(release_note_path, excel_file)
+ 
+#     # Check if the file exists
+#     if os.path.exists(excel_file_path):
+#         wb = load_workbook(excel_file_path)
+#     else:
+#         wb = Workbook()
+ 
+#     ws = wb.active
+#     ws.title = envs[1]  # Name the first sheet
+ 
+#     ws.append([
+#         'Service name', 'Change Request', 'Key', f'{envs[0]}-current value', f'{envs[0]}-previous value', f'{envs[1]}-current value', f'{envs[1]}-previous value','Comment'])
+ 
+#     # Write the changes for the environment
+#     for change in changes:
+#         print(change)
+#         service_name, change_type, key, le_cur, le_prev, he_cur, he_prev, comment = change
+ 
+#         # 🔄 If key is image//repository, update he_cur with transformed tag
+#         if key == 'image//image_name':
+#             he_cur = update_image_tag(he_cur, envs[1])  # replace after 2nd hyphen
+ 
+#         # 🧠 Scenario 2: Root object with embedded image.repository
+#         elif isinstance(comment, str) and comment.strip().lower() == 'root object added':
+#             he_cur = update_image_repo_in_json_string(he_cur, envs[1])
+ 
+#         # Check if value exceeds 32,767 characters
+#         if len(le_cur) > 32767:
+#             # Save large data to a text file
+#             txt_file_name = f"{service_name}.txt"
+#             txt_file_path = os.path.join(release_note_path, txt_file_name)
+#             with open(txt_file_path, 'w') as txt_file:
+#                 txt_file.write(le_cur)
+ 
+#             # Format path for hyperlink (absolute path)
+#             txt_file_path_linked = f'file:///{os.path.abspath(txt_file_path)}'.replace(' ', '%20')
+ 
+#             # Create a hyperlink in Excel pointing to this text file
+#             ws.append([service_name,change_type,key,f'=HYPERLINK("{txt_file_path_linked}")','','','',comment])
+#         else:
+#             # Append new changes directly to the relevant sheet
+#             ws.append([service_name, change_type, key, le_cur, le_prev, he_cur, he_prev, comment])
+ 
+#     # Save the updated workbook
+#     wb.save(excel_file_path)
  
 def get_input(prompt):
     attempts = 3
