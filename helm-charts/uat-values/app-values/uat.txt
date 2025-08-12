@@ -1,0 +1,3 @@
+service-auth
+service-admin
+service-user
