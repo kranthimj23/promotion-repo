@@ -12,7 +12,7 @@ image:
   imageName: asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-admin/admin:14-uat
   pullPolicy: IfNotPresent
   repository: asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-admin/admin
-  tag: 12-uat
+  tag: 14-uat
 replicaCount: 1
 resources:
   limits:
