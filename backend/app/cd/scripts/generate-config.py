@@ -98,25 +98,31 @@ def try_parse_json(value):
 def handle_data_env(json_data, service_name, change_request, parsed_value):
     obj = json_data.setdefault(service_name, [])
 
+    def get_name(val):
+        if isinstance(val, dict):
+            return val.get('name')
+        return str(val)
+
     if change_request == 'add':
-        if not any(isinstance(entry, dict) and entry.get('name') == parsed_value.get('name') for entry in obj):
+        if not any(isinstance(entry, dict) and entry.get('name') == get_name(parsed_value) for entry in obj):
             obj.append(parsed_value)
             print(f"Added to '{service_name}': {parsed_value}")
         else:
-            print(f"Warning: Entry with name '{parsed_value.get('name')}' already exists in '{service_name}'.")
+            print(f"Warning: Entry with name '{get_name(parsed_value)}' already exists in '{service_name}'.")
 
     elif change_request == 'modify':
         for entry in obj:
-            if isinstance(entry, dict) and entry.get('name') == parsed_value.get('name'):
-                entry.update(parsed_value)
+            if isinstance(entry, dict) and entry.get('name') == get_name(parsed_value):
+                entry.update(parsed_value if isinstance(parsed_value, dict) else {})
                 print(f"Modified entry in '{service_name}': {entry}")
                 break
         else:
-            print(f"Warning: Attempted to modify non-existent entry '{parsed_value.get('name')}' in '{service_name}'.")
+            print(f"Warning: Attempted to modify non-existent entry '{get_name(parsed_value)}' in '{service_name}'.")
 
     elif change_request == 'delete':
-        json_data[service_name] = [entry for entry in obj if not (isinstance(entry, dict) and entry.get('name') == parsed_value.get('name'))]
-        print(f"Deleted entry from '{service_name}' with name '{parsed_value.get('name')}'.")
+        json_data[service_name] = [entry for entry in obj if not (isinstance(entry, dict) and entry.get('name') == get_name(parsed_value))]
+        print(f"Deleted entry from '{service_name}' with name '{get_name(parsed_value)}'.")
+
  
 # def handle_data_env(json_data, service_name, change_request, parsed_value):
 #     """Handles modifications for 'data' and 'env' services."""
