@@ -93,30 +93,54 @@ def try_parse_json(value):
         return json.loads(value)
     except (json.JSONDecodeError, TypeError):
         return value
- 
+
+
 def handle_data_env(json_data, service_name, change_request, parsed_value):
-    """Handles modifications for 'data' and 'env' services."""
     obj = json_data.setdefault(service_name, [])
- 
+
     if change_request == 'add':
-        if not any(entry['name'] == parsed_value['name'] for entry in obj):
+        if not any(isinstance(entry, dict) and entry.get('name') == parsed_value.get('name') for entry in obj):
             obj.append(parsed_value)
             print(f"Added to '{service_name}': {parsed_value}")
         else:
-            print(f"Warning: Entry with name '{parsed_value['name']}' already exists in '{service_name}'.")
- 
+            print(f"Warning: Entry with name '{parsed_value.get('name')}' already exists in '{service_name}'.")
+
     elif change_request == 'modify':
         for entry in obj:
-            if entry['name'] == parsed_value['name']:
+            if isinstance(entry, dict) and entry.get('name') == parsed_value.get('name'):
                 entry.update(parsed_value)
                 print(f"Modified entry in '{service_name}': {entry}")
                 break
         else:
-            print(f"Warning: Attempted to modify non-existent entry '{parsed_value['name']}' in '{service_name}'.")
- 
+            print(f"Warning: Attempted to modify non-existent entry '{parsed_value.get('name')}' in '{service_name}'.")
+
     elif change_request == 'delete':
-        json_data[service_name] = [entry for entry in obj if entry['name'] != parsed_value['name']]
-        print(f"Deleted entry from '{service_name}' with name '{parsed_value['name']}'.")
+        json_data[service_name] = [entry for entry in obj if not (isinstance(entry, dict) and entry.get('name') == parsed_value.get('name'))]
+        print(f"Deleted entry from '{service_name}' with name '{parsed_value.get('name')}'.")
+ 
+# def handle_data_env(json_data, service_name, change_request, parsed_value):
+#     """Handles modifications for 'data' and 'env' services."""
+#     obj = json_data.setdefault(service_name, [])
+ 
+#     if change_request == 'add':
+#         if not any(entry['name'] == parsed_value['name'] for entry in obj):
+#             obj.append(parsed_value)
+#             print(f"Added to '{service_name}': {parsed_value}")
+#         else:
+#             print(f"Warning: Entry with name '{parsed_value['name']}' already exists in '{service_name}'.")
+ 
+#     elif change_request == 'modify':
+#         for entry in obj:
+#             if entry['name'] == parsed_value['name']:
+#                 entry.update(parsed_value)
+#                 print(f"Modified entry in '{service_name}': {entry}")
+#                 break
+#         else:
+#             print(f"Warning: Attempted to modify non-existent entry '{parsed_value['name']}' in '{service_name}'.")
+ 
+#     elif change_request == 'delete':
+#         json_data[service_name] = [entry for entry in obj if entry['name'] != parsed_value['name']]
+#         print(f"Deleted entry from '{service_name}' with name '{parsed_value['name']}'.")
  
 # def insert_hardcoded_value(folder,service_list):
 #     """
@@ -519,6 +543,7 @@ def modify_deployment_yaml(folder, deleted_services):
 
     with open(temp_path, "w") as f:
         f.writelines(new_lines)
+
  
 def create_txt_file(excel_path, env, txt_path):
     wb = openpyxl.load_workbook(excel_path)
