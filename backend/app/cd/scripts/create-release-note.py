@@ -492,30 +492,38 @@ def update_image_tag(image_str, env_keyword):
     return f"{image_repo}:{new_tag}"
 
 
-def update_image_repo_in_json_string(json_str, env_keyword):
+def update_image_repo_in_json_string(json_str_or_obj, env_keyword):
     """
-    Parse a JSON string and update imageName, image_name, and tag values safely.
+    Safely update imageName, image_name, and tag fields in a JSON string or object,
+    replacing environment parts of tags without affecting domains etc.
+    Accepts either JSON string or already loaded Python object.
+    Returns pretty-printed JSON string.
     """
-    try:
-        data = json.loads(json_str)
-    except json.JSONDecodeError:
-        return json_str  # return as-is if not a valid JSON
+    # If input is already dict or list, use it directly
+    if isinstance(json_str_or_obj, (dict, list)):
+        data = json_str_or_obj
+    else:
+        # Otherwise, try to parse JSON string
+        try:
+            data = json.loads(json_str_or_obj)
+        except json.JSONDecodeError:
+            # If invalid JSON string, return as-is
+            return json_str_or_obj
 
+    # Proceed only if data is a dict (since you're updating image field)
     if not isinstance(data, dict):
-        return json_str
+        return json.dumps(data, indent=4) if isinstance(data, (dict, list)) else data
 
-    image_obj = data.get('image', {})
+    image_obj = data.get('image')
     if isinstance(image_obj, dict):
-        # Update both camelCase and snake_case keys
-        if 'imageName' in image_obj:
-            image_obj['imageName'] = update_image_tag(image_obj['imageName'], env_keyword)
-        if 'image_name' in image_obj:
-            image_obj['image_name'] = update_image_tag(image_obj['image_name'], env_keyword)
-        if 'tag' in image_obj:
-            image_obj['tag'] = update_image_tag(image_obj['tag'], env_keyword)
+        # Update relevant keys safely
+        for key in ['imageName', 'image_name', 'tag']:
+            if key in image_obj and isinstance(image_obj[key], str):
+                image_obj[key] = update_image_tag(image_obj[key], env_keyword)
 
         data['image'] = image_obj
 
+    # Return the updated JSON as pretty string
     return json.dumps(data, indent=4)
  
  
