@@ -25,22 +25,8 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
             {{- $svc := .Values.serviceName | replace "-" "_" }}
+            {{- $svc := .Values.serviceName }}
             {{- range $env := index .Values.env $svc }}
-            {{- toYaml $env | nindent 14 }}
+            - name: {{ $env.name }}
+              value: "{{ $env.value }}"
             {{- end }}
-            {{- with .Values.env.data }}
-            {{- toYaml . | nindent 14 }}
-            {{- end }}
-            {{- with .Values.env.env }}
-            {{- toYaml . | nindent 14 }}
-            {{- end }}
-            {{- with .Values.env.service_admin }}
-            {{- toYaml . | nindent 14 }}
-            {{- end }}
-            {{- with .Values.env.service_auth }}
-            {{- toYaml . | nindent 14 }}
-            {{- end }}
-            {{- with .Values.env.service_user }}
-            {{- toYaml . | nindent 14 }}
-            {{- end }}
-
