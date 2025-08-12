@@ -30,3 +30,12 @@ spec:
             - name: {{ $env.name }}
               value: "{{ $env.value }}"
             {{- end }}
+            {{- with .Values.env.service_admin }}
+            {{- toYaml . | nindent 14 }}
+            {{- end }}
+            {{- with .Values.env.service_auth }}
+            {{- toYaml . | nindent 14 }}
+            {{- end }}
+            {{- with .Values.env.service_user }}
+            {{- toYaml . | nindent 14 }}
+            {{- end }}
