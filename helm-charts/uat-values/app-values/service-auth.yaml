@@ -1,0 +1,27 @@
+env:
+  service_auth:
+  - name: key2
+    value: value1
+  - name: name
+    value: Raj
+  - name: name
+    value: Man
+  - name: key3
+    value: value3
+image:
+  imageName: asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-auth/auth:12-uat
+  pullPolicy: IfNotPresent
+  repository: asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-auth/auth
+  tag: 12-uat
+replicaCount: 1
+resources:
+  limits:
+    cpu: 100m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+service:
+  port: 8080
+  type: ClusterIP
+serviceName: service-auth
