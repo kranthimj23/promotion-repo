@@ -118,60 +118,111 @@ def handle_data_env(json_data, service_name, change_request, parsed_value):
         json_data[service_name] = [entry for entry in obj if entry['name'] != parsed_value['name']]
         print(f"Deleted entry from '{service_name}' with name '{parsed_value['name']}'.")
  
-def insert_hardcoded_value(folder,service_list):
+# def insert_hardcoded_value(folder,service_list):
+#     """
+#     Inserts a hardcoded multi-line value in the 'env' section at the last-but-one position
+#     if multiple values exist, or at the end if only one value is present.
+#     """
+#     temp_path = os.path.join(folder, "helm-charts", "templates", "deployment.yaml")
+ 
+#     # Read the YAML file as text
+#     with open(temp_path, 'r') as file:
+#         text = file.read()
+#     # Regex to locate the 'env:' section and capture its contents
+#     env_pattern = r"(env:\s*\n(?:\s*\{\{.*\}\}\n?)+)"
+#     # Find the env block
+#     match = re.search(env_pattern, text)
+#     if not match:
+#         print("No 'env' section found.")
+#         return text
+ 
+#     # Extract the env block and split it into lines
+#     env_block = match.group(1)
+#     env_lines = env_block.strip().splitlines()
+ 
+#     if env_lines[-1]:
+#         indent = len(env_lines[-1]) - len((env_lines[-1]).strip())
+#         indentation = " " * indent
+#         print(indentation + ":indent")
+ 
+#     if "{{- end }}" in env_lines[-1] and "{{- end }}" in env_lines[-2]:
+#             env_lines[-1] = ""
+#             print("end removed")
+ 
+#     for service_file in service_list:
+#         service_file = service_file.replace('-','_')
+#         # Define the hardcoded block using the `service_file` variable
+#         hardcoded_block = f"""{{{{- with .Values.env.{service_file} }}}}
+#               {{{{- toYaml . | nindent 12 }}}}
+#             {{{{- end }}}}"""
+ 
+#         # Insert the hardcoded block at the last-but-one position, if possible
+#         env_lines.append(indentation + hardcoded_block.strip())
+ 
+#     env_lines.append(indentation+"{{- end}}")
+#     env_lines.append(indentation+"\n")
+ 
+#     # Reassemble the modified env block and replace it in the original text
+#     modified_env_block = "\n".join(env_lines)
+#     modified_text = text.replace(env_block, modified_env_block)
+ 
+ 
+#     with open(temp_path, 'w') as file:
+#         file.write(modified_text)
+ 
+#     return modified_text
+
+
+def insert_hardcoded_value(folder, service_list):
     """
-    Inserts a hardcoded multi-line value in the 'env' section at the last-but-one position
-    if multiple values exist, or at the end if only one value is present.
+    Inserts a hardcoded multi-line value in the 'env' section safely.
+    Detects proper indentation and avoids duplicate {{ end }}.
     """
     temp_path = os.path.join(folder, "helm-charts", "templates", "deployment.yaml")
- 
-    # Read the YAML file as text
-    with open(temp_path, 'r') as file:
-        text = file.read()
-    # Regex to locate the 'env:' section and capture its contents
-    env_pattern = r"(env:\s*\n(?:\s*\{\{.*\}\}\n?)+)"
-    # Find the env block
-    match = re.search(env_pattern, text)
-    if not match:
-        print("No 'env' section found.")
-        return text
- 
-    # Extract the env block and split it into lines
-    env_block = match.group(1)
-    env_lines = env_block.strip().splitlines()
- 
-    if env_lines[-1]:
-        indent = len(env_lines[-1]) - len((env_lines[-1]).strip())
-        indentation = " " * indent
-        print(indentation + ":indent")
- 
-    if "{{- end }}" in env_lines[-1] and "{{- end }}" in env_lines[-2]:
-            env_lines[-1] = ""
-            print("end removed")
- 
-    for service_file in service_list:
-        service_file = service_file.replace('-','_')
-        # Define the hardcoded block using the `service_file` variable
-        hardcoded_block = f"""{{{{- with .Values.env.{service_file} }}}}
-              {{{{- toYaml . | nindent 12 }}}}
-            {{{{- end }}}}"""
- 
-        # Insert the hardcoded block at the last-but-one position, if possible
-        env_lines.append(indentation + hardcoded_block.strip())
- 
-    env_lines.append(indentation+"{{- end}}")
-    env_lines.append(indentation+"\n")
- 
-    # Reassemble the modified env block and replace it in the original text
-    modified_env_block = "\n".join(env_lines)
-    modified_text = text.replace(env_block, modified_env_block)
- 
- 
-    with open(temp_path, 'w') as file:
-        file.write(modified_text)
- 
-    return modified_text
- 
+
+    with open(temp_path, "r") as f:
+        lines = f.readlines()
+
+    new_lines = []
+    inside_env = False
+    env_start_idx = None
+    env_indent = ""
+    block_depth = 0
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+
+        if not inside_env and stripped.startswith("env:"):
+            inside_env = True
+            env_start_idx = i
+            env_indent = re.match(r"^(\s*)", line).group(1)
+            new_lines.append(line)
+            continue
+
+        if inside_env:
+            if re.search(r"{{[-]?\s*(with|if|range)\b", stripped):
+                block_depth += 1
+            elif re.search(r"{{[-]?\s*end\s*}}", stripped):
+                block_depth -= 1
+
+            # Detect end of env block (blank line or new YAML key at same indent)
+            if block_depth <= 0 and stripped and not stripped.startswith("{{"):
+                inside_env = False
+                # Insert our hardcoded blocks here before moving on
+                for service_file in service_list:
+                    sf = service_file.replace("-", "_")
+                    hardcoded_block = [
+                        f"{env_indent}  {{- with .Values.env.{sf} }}\n",
+                        f"{env_indent}    {{- toYaml . | nindent 12 }}\n",
+                        f"{env_indent}  {{- end }}\n"
+                    ]
+                    new_lines.extend(hardcoded_block)
+            new_lines.append(line)
+        else:
+            new_lines.append(line)
+
+    with open(temp_path, "w") as f:
+        f.writelines(new_lines)
  
  
 def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, higher_env):
@@ -431,22 +482,43 @@ def apply_sed_to_yaml(folder_path):
 
 def modify_deployment_yaml(folder, deleted_services):
     """
-    Remove entire {{ with .Values.env.service }} ... {{ end }} blocks
+    Safely remove entire {{ with .Values.env.<service> }} ... {{ end }} blocks
     from deployment.yaml for deleted services.
+    Counts block nesting to avoid leaving stray {{ end }}.
     """
     temp_path = os.path.join(folder, "helm-charts", "templates", "deployment.yaml")
 
     with open(temp_path, "r") as f:
-        yaml_text = f.read()
+        lines = f.readlines()
 
-    for service in deleted_services:
-        service_name = service.replace("-", "_")
-        # Match everything from `with` line to matching `{{- end }}` on its own line
-        pattern = rf"{{- with \.Values\.env\.{service_name} }}[\s\S]*?{{- end }}"
-        yaml_text = re.sub(pattern, "", yaml_text)
+    new_lines = []
+    skip_block = False
+    block_depth = 0
+
+    for line in lines:
+        if not skip_block:
+            # Check for start of a with block for a deleted service
+            for service in deleted_services:
+                service_name = service.replace("-", "_")
+                if re.search(rf"{{[-]?\s*with\s+\.Values\.env\.{service_name}\s*}}", line):
+                    skip_block = True
+                    block_depth = 1
+                    break
+
+            if not skip_block:
+                new_lines.append(line)
+        else:
+            # Inside a skipped block — track nesting
+            if re.search(r"{{[-]?\s*(with|if|range)\b", line):
+                block_depth += 1
+            elif re.search(r"{{[-]?\s*end\s*}}", line):
+                block_depth -= 1
+                if block_depth == 0:
+                    skip_block = False  # End of our block — don't append this end
+            # Skip everything while inside the block
 
     with open(temp_path, "w") as f:
-        f.write(yaml_text)
+        f.writelines(new_lines)
  
 def create_txt_file(excel_path, env, txt_path):
     wb = openpyxl.load_workbook(excel_path)
