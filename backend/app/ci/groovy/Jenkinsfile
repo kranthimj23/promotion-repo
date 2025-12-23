@@ -13,7 +13,7 @@ pipeline {
         GCP_KEY = '/var/lib/jenkins/keys/nice-virtue-463917-m0-b7c626c7348c.json'
         
         PYTHON_EXEC = 'python3.11'
-        GIT_CREDENTIALS_ID = credentials('github-creds')
+        GIT_CREDENTIALS_ID = credentials('git-token-1')
     }
 
     stages {
@@ -21,7 +21,7 @@ pipeline {
             steps {
                 deleteDir()
                 script {
-                    withCredentials([string(credentialsId: 'github-creds', variable: 'GIT_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'git-token-1', variable: 'GIT_TOKEN')]) {
                         checkout([
                             $class: 'GitSCM',
                             branches: [[name: "*/dev"]],
