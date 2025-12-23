@@ -13,7 +13,7 @@ pipeline {
         GCP_KEY = '/var/lib/jenkins/keys/nice-virtue-463917-m0-b7c626c7348c.json'
         
         PYTHON_EXEC = 'python3.11'
-        GIT_CREDENTIALS_ID = credentials('Jenkins-token-1')
+        GIT_CREDENTIALS_ID = credentials('github-creds')
     }
 
     stages {
