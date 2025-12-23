@@ -21,7 +21,7 @@ pipeline {
             steps {
                 deleteDir()
                 script {
-                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'github-creds', variable: 'GIT_TOKEN')]) {
                         checkout([
                             $class: 'GitSCM',
                             branches: [[name: "*/dev"]],
