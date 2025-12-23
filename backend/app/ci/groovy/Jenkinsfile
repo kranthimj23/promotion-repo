@@ -5,7 +5,7 @@ pipeline {
     agent any
 
     environment {
-        PROJECT_ID = 'nice-virtue-463917-m0'
+        PROJECT_ID = 'mobile-app-1-482109'
         CLUSTER = 'autopilot-cluster-1'
         ZONE = 'us-central1'
         
