@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         PYTHON_EXEC = 'python3.11'  // Or adjust to 'python' if needed
-        GIT_CREDENTIALS_ID = credentials('jenkins-token')
+        GIT_CREDENTIALS_ID = credentials('git-token-1')
     }
  
     stages {
@@ -11,10 +11,10 @@ pipeline {
             steps {
                 deleteDir()
                 script {
-                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'git-token-1', variable: 'GIT_TOKEN')]) {
                     checkout([
                         $class: 'GitSCM',
-                        branches: [[name: "*/main"]],
+                        branches: [[name: "*/zdt-application"]],
                         userRemoteConfigs: [[
                             url: "${env.github_url}",
                             credentialsId: env.GIT_CREDENTIALS_ID
@@ -29,7 +29,7 @@ pipeline {
         stage('Load and Run script1.py') {
             steps {
                     configFileProvider([configFile(fileId: 'merger', targetLocation: 'merger.py')]) {
-                        withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                        withCredentials([string(credentialsId: 'git-token-1', variable: 'GIT_TOKEN')]) {
                             script {
                                 def result = sh(
                                     script: "${env.PYTHON_EXEC} merger.py ${env.lower_env} ${env.higher_env} ${env.github_url} ${env.new_version}",
@@ -81,7 +81,7 @@ pipeline {
                                 echo "Triggering Push-Files-To-Branch job for new branch: ${env.X2_BRANCH}"
         
                                 configFileProvider([configFile(fileId: 'values-promotion', targetLocation: 'values-promotion.py')]) {
-                                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                                    withCredentials([string(credentialsId: 'git-token-1', variable: 'GIT_TOKEN')]) {
                                     echo "${env.PYTHON_EXEC} values-promotion.py ${env.X2_BRANCH}"
                                     sh "${env.PYTHON_EXEC} values-promotion.py ${env.github_url} ${env.X2_BRANCH}"
                                     }
@@ -105,7 +105,7 @@ pipeline {
                         script {
                             if (env.X1_BRANCH && env.X2_BRANCH) {
                                 configFileProvider([configFile(fileId: 'create-release-note', targetLocation: 'create-release-note.py'), configFile(fileId: 'database_scripts_merger', targetLocation: 'database_scripts_merger.py')]) {
-                                        withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                                        withCredentials([string(credentialsId: 'git-token-1', variable: 'GIT_TOKEN')]) {
                                         sh 'chmod +x database_scripts_merger.py'
                                         echo "create-release-note.py is getting executed with these parameters: ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url}"
                                         sh "${env.PYTHON_EXEC} create-release-note.py ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url} database_scripts_merger.py"
