@@ -51,13 +51,13 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    image_repo = " us-central1-docker.pkg.dev/${env.PROJECT_ID}/service-admin/admin"
+                    image_repo = "us-central1-docker.pkg.dev/${env.PROJECT_ID}/service-admin/admin"
                     image_tag = "${BUILD_NUMBER}-${env.env_namespace ?: 'dev'}" // fallback if env_namespace not set
                     def image_full = "${image_repo}:${image_tag}"
 
                     sh """
                         echo 'Logging in to Artifact Registry...'
-                        gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://asia-south1-docker.pkg.dev
+                        gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
 
                         echo 'Building Docker image...'
                         docker build -t ${image_full} .
