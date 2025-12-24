@@ -65,7 +65,7 @@ pipeline {
                             string(credentialsId: env.GIT_CREDENTIALS_ID, variable: 'GIT_TOKEN')
                         ]) {
                         
-                        def deployScriptPath = "/zdt-manager-src/backend/app/cd/scripts/deploy.py"
+                        def deployScriptPath = "${WORKSPACE}/zdt-manager-src/backend/app/cd/scripts/deploy.py"
                         def deployNamespace = env.higher_env
                         def deployRepoUrl = env.github_url
                         def deployBranch = env.promotion_branch_x
