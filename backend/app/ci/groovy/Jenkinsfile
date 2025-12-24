@@ -40,7 +40,7 @@ pipeline {
                     sh '''
                       gcloud auth activate-service-account --key-file="$GCP_KEY_FILE"
                       gcloud config set project mobile-app-1-482109
-                      gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+                      gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
                       gcloud auth list
                     '''
                 }
