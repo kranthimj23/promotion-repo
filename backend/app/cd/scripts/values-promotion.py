@@ -11,17 +11,17 @@ app_raw_list = os.getenv('app-repo-list', '')
 app_repo_list = [item.strip() for item in app_raw_list.split('\n') if item.strip()]
 print("Parsed list:", app_repo_list)
  
-aql_db_raw_list = os.getenv('aql-db-repo-list', '')
-aql_db_repo_list = [item.strip() for item in aql_db_raw_list.split('\n') if item.strip()]
-print("Parsed list:", aql_db_repo_list)
+#aql_db_raw_list = os.getenv('aql-db-repo-list', '')
+#aql_db_repo_list = [item.strip() for item in aql_db_raw_list.split('\n') if item.strip()]
+#print("Parsed list:", aql_db_repo_list)
  
-sql_db_raw_list = os.getenv('sql-db-repo-list', '')
-sql_db_repo_list = [item.strip() for item in sql_db_raw_list.split('\n') if item.strip()]
-print("Parsed list:", sql_db_repo_list)
+#sql_db_raw_list = os.getenv('sql-db-repo-list', '')
+#sql_db_repo_list = [item.strip() for item in sql_db_raw_list.split('\n') if item.strip()]
+#print("Parsed list:", sql_db_repo_list)
  
-infra_raw_list = os.getenv('infra-repo-list', '')
-infra_repo_list = [item.strip() for item in infra_raw_list.split('\n') if item.strip()]
-print("Parsed list:", infra_repo_list)
+#infra_raw_list = os.getenv('infra-repo-list', '')
+#infra_repo_list = [item.strip() for item in infra_raw_list.split('\n') if item.strip()]
+#print("Parsed list:", infra_repo_list)
  
 promotion_repo = sys.argv[1]
 target_branch = sys.argv[2]
@@ -36,14 +36,14 @@ if github_token and "github.com" in promotion_repo:
         raise ValueError("Unsupported repo_url format. Must start with https://")
  
 source_app_relative_path = os.path.join("helm-charts", "dev-values")
-source_aql_relative_path = os.path.join("AQL", "scripts")
+#source_aql_relative_path = os.path.join("AQL", "scripts")
 # source_sql_relative_path = os.path.join("SQL", "scripts")
 # source_infra_relative_path = os.path.join("Infra")
  
 destination_app_relative_path = os.path.join("helm-charts", "dev-values", "app-values")
-destination_aql_relative_path = os.path.join("helm-charts", "dev-values", "db-scripts", "AQL")
-# destination_sql_relative_path = os.path.join("helm-charts", "dev-values", "db-scripts", "SQL")
-destination_infra_relative_path = os.path.join("helm-charts", "dev-values", "infra-values")
+#destination_aql_relative_path = os.path.join("helm-charts", "dev-values", "db-scripts", "AQL")
+#destination_sql_relative_path = os.path.join("helm-charts", "dev-values", "db-scripts", "SQL")
+#destination_infra_relative_path = os.path.join("helm-charts", "dev-values", "infra-values")
  
 # ---------------------- FUNCTIONS ----------------------------- #
  
@@ -121,33 +121,33 @@ def main():
             print(f"Failed to fetch from {repo}: {e}")
  
     # ------------------ AQL REPOS ------------------ #
-    for repo in aql_db_repo_list:
-        try:
-            if github_token and "github.com" in repo:
-                # Inject token into repo URL (safe for HTTPS GitHub URLs)
-                if repo.startswith("https://"):
-                    repo = repo.replace("https://", f"https://{github_token}@")
-                else:
-                    raise ValueError("Unsupported repo_url format. Must start with https://")
-            aql_temp_dir = tempfile.mkdtemp()
-            if os.path.exists(aql_temp_dir):
-                shutil.rmtree(aql_temp_dir)
-            os.makedirs(aql_temp_dir)
-            repo_name = Path(repo).stem
-            repo_path = os.path.join(aql_temp_dir, repo_name)
-            run_git_command(f"git clone --branch main {repo}", cwd=aql_temp_dir)
-            run_git_command(f"git pull origin main", cwd=repo_path)
+    # for repo in aql_db_repo_list:
+    #     try:
+    #         if github_token and "github.com" in repo:
+    #             # Inject token into repo URL (safe for HTTPS GitHub URLs)
+    #             if repo.startswith("https://"):
+    #                 repo = repo.replace("https://", f"https://{github_token}@")
+    #             else:
+    #                 raise ValueError("Unsupported repo_url format. Must start with https://")
+    #         aql_temp_dir = tempfile.mkdtemp()
+    #         if os.path.exists(aql_temp_dir):
+    #             shutil.rmtree(aql_temp_dir)
+    #         os.makedirs(aql_temp_dir)
+    #         repo_name = Path(repo).stem
+    #         repo_path = os.path.join(aql_temp_dir, repo_name)
+    #         run_git_command(f"git clone --branch main {repo}", cwd=aql_temp_dir)
+    #         run_git_command(f"git pull origin main", cwd=repo_path)
  
-            source_path_aql = os.path.join(repo_path, source_aql_relative_path)
-            aql_files = []
-            if os.path.exists(source_path_aql):
-                aql_files = [(f.name, f.read_text()) for f in Path(source_path_aql).glob("*.aql")]
-            collected_aql_files.extend(aql_files)
-            print(f"Fetched {len(aql_files)} aql files from {repo}")
-            shutil.rmtree(aql_temp_dir)
+    #         source_path_aql = os.path.join(repo_path, source_aql_relative_path)
+    #         aql_files = []
+    #         if os.path.exists(source_path_aql):
+    #             aql_files = [(f.name, f.read_text()) for f in Path(source_path_aql).glob("*.aql")]
+    #         collected_aql_files.extend(aql_files)
+    #         print(f"Fetched {len(aql_files)} aql files from {repo}")
+    #         shutil.rmtree(aql_temp_dir)
  
-        except Exception as e:
-            print(f"Failed to fetch from {repo}: {e}")
+    #     except Exception as e:
+    #         print(f"Failed to fetch from {repo}: {e}")
  
     # ------------------ SQL REPOS (commented out) ------------------ #
     # for repo in sql_db_repo_list:
@@ -171,44 +171,44 @@ def main():
     #         print(f"Failed to fetch from {repo}: {e}")
  
     # ------------------ INFRA REPOS ------------------ #
-    for repo in infra_repo_list:
-        try:
-            if github_token and "github.com" in repo:
-                # Inject token into repo URL (safe for HTTPS GitHub URLs)
-                if repo.startswith("https://"):
-                    repo = repo.replace("https://", f"https://{github_token}@")
-                else:
-                    raise ValueError("Unsupported repo_url format. Must start with https://")
+    # for repo in infra_repo_list:
+    #     try:
+    #         if github_token and "github.com" in repo:
+    #             # Inject token into repo URL (safe for HTTPS GitHub URLs)
+    #             if repo.startswith("https://"):
+    #                 repo = repo.replace("https://", f"https://{github_token}@")
+    #             else:
+    #                 raise ValueError("Unsupported repo_url format. Must start with https://")
 
-            infra_temp_dir = tempfile.mkdtemp()
-            if os.path.exists(infra_temp_dir):
-                shutil.rmtree(infra_temp_dir)
-            os.makedirs(infra_temp_dir)
-            repo_name = Path(repo).stem
-            repo_path = os.path.join(infra_temp_dir, repo_name)
-            run_git_command(f"git clone --branch main {repo}", cwd=infra_temp_dir)
+    #         infra_temp_dir = tempfile.mkdtemp()
+    #         if os.path.exists(infra_temp_dir):
+    #             shutil.rmtree(infra_temp_dir)
+    #         os.makedirs(infra_temp_dir)
+    #         repo_name = Path(repo).stem
+    #         repo_path = os.path.join(infra_temp_dir, repo_name)
+    #         run_git_command(f"git clone --branch main {repo}", cwd=infra_temp_dir)
  
-            source_path_infra = repo_path
-            print(f"Infra source path: {source_path_infra}")
+    #         source_path_infra = repo_path
+    #         print(f"Infra source path: {source_path_infra}")
  
-            collected_infra_dirs.append(source_path_infra)
+    #         collected_infra_dirs.append(source_path_infra)
  
-        except Exception as e:
-            print(f"Failed to fetch from {repo}: {e}")
+    #     except Exception as e:
+    #         print(f"Failed to fetch from {repo}: {e}")
  
     # ------------------ PREPARE PROMOTION REPO AND WRITE ------------------ #
     try:
         promo_repo_path = prepare_promotion_repo(promotion_repo, temp_dir, target_branch)
  
         destination_path = os.path.join(promo_repo_path, destination_app_relative_path)
-        destination_aql_path = os.path.join(promo_repo_path, destination_aql_relative_path)
+        #destination_aql_path = os.path.join(promo_repo_path, destination_aql_relative_path)
         # destination_sql_path = os.path.join(promo_repo_path, destination_sql_relative_path)
-        destination_infra_path = os.path.join(promo_repo_path, destination_infra_relative_path)
+        #destination_infra_path = os.path.join(promo_repo_path, destination_infra_relative_path)
  
         os.makedirs(destination_path, exist_ok=True)
-        os.makedirs(destination_aql_path, exist_ok=True)
+        #os.makedirs(destination_aql_path, exist_ok=True)
         # os.makedirs(destination_sql_path, exist_ok=True)
-        os.makedirs(destination_infra_path, exist_ok=True)
+        #os.makedirs(destination_infra_path, exist_ok=True)
  
         # Write YAML files
         for file_name, content in collected_files:
@@ -216,24 +216,24 @@ def main():
             with open(dest_file_path, 'x') as f:
                 f.write(content)
  
-        # Write AQL files
-        for file_name, content in collected_aql_files:
-            dest_aql_file_path = os.path.join(destination_aql_path, file_name)
-            with open(dest_aql_file_path, 'x') as f:
-                f.write(content)
+        # # Write AQL files
+        # for file_name, content in collected_aql_files:
+        #     dest_aql_file_path = os.path.join(destination_aql_path, file_name)
+        #     with open(dest_aql_file_path, 'x') as f:
+        #         f.write(content)
  
-        # Copy infra directories (overwrite existing infra-values folder)
-        for infra_source_path in collected_infra_dirs:
-            if os.path.exists(infra_source_path):
-                print(f"Copying infra directory from {infra_source_path} to {destination_infra_path}")
+        # # Copy infra directories (overwrite existing infra-values folder)
+        # for infra_source_path in collected_infra_dirs:
+        #     if os.path.exists(infra_source_path):
+        #         print(f"Copying infra directory from {infra_source_path} to {destination_infra_path}")
  
-                # Remove existing destination infra folder to avoid copytree error
-                if os.path.exists(destination_infra_path):
-                    shutil.rmtree(destination_infra_path)
+        #         # Remove existing destination infra folder to avoid copytree error
+        #         if os.path.exists(destination_infra_path):
+        #             shutil.rmtree(destination_infra_path)
  
-                shutil.copytree(infra_source_path, destination_infra_path)
-            else:
-                print(f"Infra source path does not exist: {infra_source_path}")
+        #         shutil.copytree(infra_source_path, destination_infra_path)
+        #     else:
+        #         print(f"Infra source path does not exist: {infra_source_path}")
  
         # Verification
         print("\nVerifying written files in promotion repo...\n")
@@ -244,12 +244,12 @@ def main():
             else:
                 print(f"Missing YAML file: {dest_file_path}")
  
-        for file_name, _ in collected_aql_files:
-            dest_aql_file_path = os.path.join(destination_aql_path, file_name)
-            if os.path.exists(dest_aql_file_path):
-                print(f"Found AQL: {dest_aql_file_path}")
-            else:
-                print(f"Missing AQL file: {dest_aql_file_path}")
+        # for file_name, _ in collected_aql_files:
+        #     dest_aql_file_path = os.path.join(destination_aql_path, file_name)
+        #     if os.path.exists(dest_aql_file_path):
+        #         print(f"Found AQL: {dest_aql_file_path}")
+        #     else:
+        #         print(f"Missing AQL file: {dest_aql_file_path}")
  
         # for file_name, _ in collected_sql_files:
         #     dest_sql_file_path = os.path.join(destination_sql_path, file_name)
@@ -258,8 +258,8 @@ def main():
         #     else:
         #         print(f"Missing SQL file: {dest_sql_file_path}")
  
-        for infra_dir in collected_infra_dirs:
-            print(f"Infra directory copied from: {infra_dir}")
+        # for infra_dir in collected_infra_dirs:
+        #     print(f"Infra directory copied from: {infra_dir}")
  
         # Commit and push changes
         subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd=promo_repo_path, check=True, timeout=30)
@@ -276,5 +276,3 @@ def main():
  
 if __name__ == "__main__":
     main()
- 
- 
