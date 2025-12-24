@@ -12,7 +12,7 @@ pipeline {
         // Update this path if your key is stored elsewhere
         GCP_KEY = '/var/lib/jenkins/keys/mobile-app-1-482109-e631e1327727.json'
         
-        PYTHON_EXEC = 'python3.11'
+        PYTHON_EXEC = 'python3.6'
         GIT_CREDENTIALS_ID = credentials('git-token-1')
     }
 
