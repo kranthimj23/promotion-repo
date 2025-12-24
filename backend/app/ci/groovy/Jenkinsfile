@@ -76,7 +76,7 @@ pipeline {
                 """
 
                 configFileProvider([configFile(fileId: 'deploy_to_gke', targetLocation: 'deploy_to_gke.py')]) {
-                    withCredentials([string(credentialsId: 'jenkins-token', variable: 'GIT_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'git-token-1', variable: 'GIT_TOKEN')]) {
                         script {
                             def pythonCommand = """
                                 export CLUSTER=${CLUSTER}
