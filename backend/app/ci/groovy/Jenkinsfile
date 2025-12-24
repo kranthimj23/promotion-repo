@@ -10,7 +10,7 @@ pipeline {
         ZONE = 'us-central1'
         
         // Update this path if your key is stored elsewhere
-        GCP_KEY = '/var/lib/jenkins/keys/mobile-app-1-482109-e631e1327727.json'
+        // GCP_KEY = credentials('gcp-key-1')
         
         PYTHON_EXEC = 'python3.11'
         GIT_CREDENTIALS_ID = credentials('git-token-1')
@@ -33,18 +33,20 @@ pipeline {
                 }
             }
         }
-        
+                
         stage('Authenticate with GCP') {
             steps {
-                sh """
-                    gcloud auth activate-service-account --key-file="${GCP_KEY}"
-                    gcloud config set project ${PROJECT_ID}
-                    gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
-                    gcloud auth list
-                """
-                
+                withCredentials([file(credentialsId: 'gcp-key-1', variable: 'GCP_KEY_FILE')]) {
+                    sh '''
+                      gcloud auth activate-service-account --key-file="$GCP_KEY_FILE"
+                      gcloud config set project mobile-app-1-482109
+                      gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+                      gcloud auth list
+                    '''
+                }
             }
         }
+
 
         stage('Build Docker Image') {
             steps {
