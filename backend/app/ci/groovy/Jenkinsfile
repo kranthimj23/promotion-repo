@@ -26,7 +26,7 @@ pipeline {
                             $class: 'GitSCM',
                             branches: [[name: "*/dev"]],
                             userRemoteConfigs: [[
-                                url: "https://${GIT_TOKEN}@github.com/kranthimj23/service-admin.git"
+                                url: "https://${GIT_TOKEN}@github.com/kranthimj23/${env.microservice}.git"
                             ]]
                         ])
                     }
@@ -51,7 +51,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    image_repo = "us-central1-docker.pkg.dev/${env.PROJECT_ID}/service-admin/admin"
+                    image_repo = "us-central1-docker.pkg.dev/${env.PROJECT_ID}/${env.microservice}/user"
                     image_tag = "${BUILD_NUMBER}-${env.env_namespace ?: 'dev'}" // fallback if env_namespace not set
                     def image_full = "${image_repo}:${image_tag}"
 
