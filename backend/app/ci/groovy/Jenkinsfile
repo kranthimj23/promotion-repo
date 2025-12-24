@@ -82,7 +82,9 @@ pipeline {
                                 export CLUSTER=${CLUSTER}
                                 export ZONE=${ZONE}
                                 export PROJECT_ID=${PROJECT_ID}
+                                export PYTHONPATH=/root/.local/lib/python3.11/site-packages:$PYTHONPATH
                                 echo Running Python script...
+                                echo pwd
                                 ${PYTHON_EXEC} deploy_to_gke.py ${env.env_namespace ?: 'dev'} ${image_repo} ${image_tag} ${env.github_url} ${env.microservice}
                             """
     
