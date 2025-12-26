@@ -52,8 +52,8 @@ pipeline {
             steps {
                 script {
                     image_repo = "us-central1-docker.pkg.dev/${env.PROJECT_ID}/${env.microservice}/${env.container}"
-                    //image_tag = "${BUILD_NUMBER}-${env.env_namespace ?: 'dev'}" // fallback if env_namespace not set
-                    image_tag = "${BUILD_NUMBER}" // fallback if env_namespace not set
+                    image_tag = "${BUILD_NUMBER}-${env.env_namespace ?: 'dev'}" // fallback if env_namespace not set
+                    //image_tag = "${BUILD_NUMBER}" // fallback if env_namespace not set
                     def image_full = "${image_repo}:${image_tag}"
 
                     sh """
