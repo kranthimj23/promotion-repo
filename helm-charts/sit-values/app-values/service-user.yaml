@@ -9,7 +9,7 @@ env:
   - name: key6
     value: value6
 image:
-  imageName: us-central1-docker.pkg.dev/mobile-app-1-482109/service-user/user:48-sit
+  imageName: us-central1-docker.pkg.dev/mobile-app-1-482109/service-user/user:48-dev
   pullPolicy: IfNotPresent
   repository: us-central1-docker.pkg.dev/mobile-app-1-482109/service-user/user
   tag: 48-dev
