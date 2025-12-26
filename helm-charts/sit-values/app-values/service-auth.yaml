@@ -11,10 +11,10 @@ env:
   - name: key3
     value: value3
 image:
-  imageName: us-central1-docker.pkg.dev/mobile-app-1-482109/service-auth/auth:42-sit
+  imageName: us-central1-docker.pkg.dev/mobile-app-1-482109/service-auth/auth:42-dev
   pullPolicy: IfNotPresent
   repository: us-central1-docker.pkg.dev/mobile-app-1-482109/service-auth/auth
-  tag: 42-sit
+  tag: 42-dev
 replicaCount: 1
 resources:
   limits:
