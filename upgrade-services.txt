@@ -1,2 +1,3 @@
+service-admin:"47-dev"
 service-auth:"49-dev"
 service-user:"48-dev"
