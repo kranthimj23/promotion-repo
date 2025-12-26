@@ -85,9 +85,10 @@ def main():
     repo_url = sys.argv[4]
     microservice = sys.argv[5]
 
-    print(f"CLUSTER={CLUSTER}, ZONE={ZONE}, PROJECT_ID={PROJECT_ID}")
+    #print(f"CLUSTER={CLUSTER}, ZONE={ZONE}, PROJECT_ID={PROJECT_ID}")
     print(">>> Starting deployment script")
-    print(f"CLUSTER: {CLUSTER} | ZONE: {ZONE} | PROJECT_ID: {PROJECT_ID} | NAMESPACE: {ns}")
+    #print(f"CLUSTER: {CLUSTER} | ZONE: {ZONE} | PROJECT_ID: {PROJECT_ID} | NAMESPACE: {ns}")
+    print(image_tag, image_repo)
 
     run_command(
         f"gcloud container clusters get-credentials {CLUSTER} --region {ZONE} --project {PROJECT_ID}"
