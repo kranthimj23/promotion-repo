@@ -1,1 +1,2 @@
-service-auth:"16-dev"
+service-admin:"35-dev"
+service-user:"59-dev"
