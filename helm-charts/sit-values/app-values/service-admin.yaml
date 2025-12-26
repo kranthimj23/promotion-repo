@@ -9,7 +9,7 @@ env:
   - name: name
     value: Raj
 image:
-  imageName: us-central1-docker.pkg.dev/mobile-app-1-482109/service-admin/admin:47-sit
+  imageName: us-central1-docker.pkg.dev/mobile-app-1-482109/service-admin/admin:47-dev
   pullPolicy: IfNotPresent
   repository: us-central1-docker.pkg.dev/mobile-app-1-482109/service-admin/admin
   tag: 47-dev
