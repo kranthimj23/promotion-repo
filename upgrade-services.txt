@@ -1,2 +1,1 @@
-service-auth:"42-dev"
-service-user:"40-dev"
+service-admin:"47-dev"
