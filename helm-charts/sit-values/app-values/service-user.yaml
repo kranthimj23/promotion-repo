@@ -9,10 +9,10 @@ env:
   - name: key6
     value: value6
 image:
-  imageName: us-central1-docker.pkg.dev/mobile-app-1-482109/service-user/user:40-sit
+  imageName: us-central1-docker.pkg.dev/mobile-app-1-482109/service-user/user:40-dev
   pullPolicy: IfNotPresent
   repository: us-central1-docker.pkg.dev/mobile-app-1-482109/service-user/user
-  tag: 40-sit
+  tag: 40-dev
 replicaCount: 1
 resources:
   limits:
