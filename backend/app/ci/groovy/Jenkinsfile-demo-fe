@@ -8,7 +8,7 @@ pipeline {
         PROJECT_ID = 'mobile-app-1-482109'
         CLUSTER = 'autopilot-cluster-1'
         ZONE = 'us-central1'
-        GCP_KEY = '/var/lib/jenkins/keys/mobile-app-1-482109.json'
+        GCP_KEY = '/var/lib/jenkins/keys/mobile-app-1-482109-e631e1327727.json'
         PYTHON_EXEC = 'python3.11'
         GIT_CREDENTIALS_ID = credentials('git-token-1')
     }
