@@ -1,1 +1,3 @@
-service-user
+demo-database
+demo-backend
+demo-frontend
