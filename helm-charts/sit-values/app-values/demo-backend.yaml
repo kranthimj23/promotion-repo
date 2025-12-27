@@ -7,7 +7,7 @@ env:
   - name: ENVIRONMENT
     value: dev
 image:
-  imageName: us-central1-docker.pkg.dev/mobile-app-1-482109/demo-backend/backend:1-dev
+  imageName: us-central1-docker.pkg.dev/mobile-app-1-482109/demo-backend/backend:9-dev
   pullPolicy: IfNotPresent
   repository: us-central1-docker.pkg.dev/mobile-app-1-482109/demo-backend/backend
   tag: 1-sit
