@@ -14,7 +14,7 @@ pipeline {
     }
 
     stages {
-        stage('Checkout demo-frontend repo') {
+        stage('Checkout demo-database repo') {
             steps {
                 deleteDir()
                 script {
@@ -23,7 +23,7 @@ pipeline {
                             $class: 'GitSCM',
                             branches: [[name: "*/dev"]],
                             userRemoteConfigs: [[
-                                url: "https://${GIT_TOKEN}@github.com/kranthimj23/demo-frontend.git"
+                                url: "https://${GIT_TOKEN}@github.com/kranthimj23/demo-database.git"
                             ]]
                         ])
                     }
@@ -63,7 +63,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    image_repo = "us-central1-docker.pkg.dev/${env.PROJECT_ID}/demo-frontend/frontend"
+                    image_repo = "us-central1-docker.pkg.dev/${env.PROJECT_ID}/demo-database/database"
                     image_tag = "${BUILD_NUMBER}-${env.env_namespace ?: 'dev'}"
                     def image_full = "${image_repo}:${image_tag}"
 
