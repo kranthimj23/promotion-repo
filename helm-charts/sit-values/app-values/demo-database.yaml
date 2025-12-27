@@ -7,7 +7,7 @@ env:
   - name: MAX_CONNECTIONS
     value: '100'
 image:
-  imageName: us-central1-docker.pkg.dev/mobile-app-1-482109/demo-database/database:1-sit
+  imageName: us-central1-docker.pkg.dev/mobile-app-1-482109/demo-database/database:1-dev
   pullPolicy: IfNotPresent
   repository: us-central1-docker.pkg.dev/mobile-app-1-482109/demo-database/database
   tag: 1-sit
