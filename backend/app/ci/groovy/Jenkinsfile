@@ -5,12 +5,12 @@ pipeline {
     agent any
 
     environment {
-        PROJECT_ID = 'mobile-app-1-482109'
+        PROJECT_ID = 'speedy-insight-483010-m3'
         CLUSTER = 'autopilot-cluster-1'
         ZONE = 'us-central1'
         
         // Update this path if your key is stored elsewhere
-        GCP_KEY = '/var/lib/jenkins/keys/mobile-app-1-482109-e631e1327727.json'
+        GCP_KEY = '/var/lib/jenkins/keys/speedy-insight-483010-m3-e631e1327727.json'
         
         PYTHON_EXEC = 'python3.11'
         GIT_CREDENTIALS_ID = credentials('git-token-1')
@@ -39,7 +39,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'gcp-key-1', variable: 'GCP_KEY_FILE')]) {
                     sh '''
                       gcloud auth activate-service-account --key-file="$GCP_KEY_FILE"
-                      gcloud config set project mobile-app-1-482109
+                      gcloud config set project speedy-insight-483010-m3
                       gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
                       gcloud auth list
                     '''

@@ -73,7 +73,7 @@ def update_helm_chart_temp(repo_url, image_repo, image_tag, ns, microservice):
 def main():
     CLUSTER = "autopilot-cluster-1"
     ZONE = "us-central1"
-    PROJECT_ID = "mobile-app-1-482109"
+    PROJECT_ID = "speedy-insight-483010-m3"
 
     if len(sys.argv) != 6:
         print("Usage: deploy_to_gke.py <namespace> <image_repo> <image_tag> <repo_url> <microservice>")
