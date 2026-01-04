@@ -7,8 +7,7 @@ pipeline {
     environment {
         PROJECT_ID = 'cloudlearnhub-gke-1546'
         CLUSTER = 'mygkecluster'
-        ZONE = 'asia-south1'
-        GCP_KEY = '/var/lib/jenkins/keys/cloudlearnhub-gke-1546.json'
+        REGION = 'asia-south1'
         PYTHON_EXEC = 'python3.11'
         GIT_CREDENTIALS_ID = credentials('git-token-1')
     }
@@ -51,12 +50,13 @@ pipeline {
 
         stage('Authenticate with GCP') {
             steps {
-                sh """
-                    gcloud auth activate-service-account --key-file="${GCP_KEY}"
-                    gcloud config set project ${PROJECT_ID}
+                // Uses VM's attached service account - no key file needed
+                sh '''
+                    gcloud config set project cloudlearnhub-gke-1546
                     gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+                    echo "Using VM attached service account:"
                     gcloud auth list
-                """
+                '''
             }
         }
 
@@ -84,7 +84,7 @@ pipeline {
         stage('Deploy to GKE') {
             steps {
                 sh """
-                    gcloud container clusters get-credentials ${CLUSTER} --zone ${ZONE} --project ${PROJECT_ID}
+                    gcloud container clusters get-credentials ${CLUSTER} --region ${REGION} --project ${PROJECT_ID}
                 """
                 script {
                     withCredentials([string(credentialsId: 'git-token-1', variable: 'GIT_TOKEN')]) {
@@ -92,7 +92,7 @@ pipeline {
         
                         def pythonCommand = """
                             export CLUSTER=${CLUSTER}
-                            export ZONE=${ZONE}
+                            export REGION=${REGION}
                             export PROJECT_ID=${PROJECT_ID}
                             export GIT_TOKEN=${GIT_TOKEN}
                             echo Running Python script...

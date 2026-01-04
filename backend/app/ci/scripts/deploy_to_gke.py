@@ -72,7 +72,7 @@ def update_helm_chart_temp(repo_url, image_repo, image_tag, ns, microservice):
 
 def main():
     CLUSTER = "mygkecluster"
-    ZONE = "asia-south1"
+    REGION = "asia-south1"
     PROJECT_ID = "cloudlearnhub-gke-1546"
 
     if len(sys.argv) != 6:
@@ -91,7 +91,7 @@ def main():
     print(image_tag, image_repo)
 
     run_command(
-        f"gcloud container clusters get-credentials {CLUSTER} --region {ZONE} --project {PROJECT_ID}"
+        f"gcloud container clusters get-credentials {CLUSTER} --region {REGION} --project {PROJECT_ID}"
     )
     print(">>> Cluster credentials configured")
 
