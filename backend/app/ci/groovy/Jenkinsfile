@@ -5,12 +5,12 @@ pipeline {
     agent any
 
     environment {
-        PROJECT_ID = 'speedy-insight-483010-m3'
-        CLUSTER = 'autopilot-cluster-1'
-        ZONE = 'us-central1'
+        PROJECT_ID = 'cloudlearnhub-gke-1546'
+        CLUSTER = 'mygkecluster'
+        ZONE = 'asia-south1'
         
         // Update this path if your key is stored elsewhere
-        GCP_KEY = '/var/lib/jenkins/keys/speedy-insight-483010-m3-e631e1327727.json'
+        GCP_KEY = '/var/lib/jenkins/keys/cloudlearnhub-gke-1546.json'
         
         PYTHON_EXEC = 'python3.11'
         GIT_CREDENTIALS_ID = credentials('git-token-1')
@@ -39,8 +39,8 @@ pipeline {
                 withCredentials([file(credentialsId: 'gcp-key-1', variable: 'GCP_KEY_FILE')]) {
                     sh '''
                       gcloud auth activate-service-account --key-file="$GCP_KEY_FILE"
-                      gcloud config set project speedy-insight-483010-m3
-                      gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+                      gcloud config set project cloudlearnhub-gke-1546
+                      gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
                       gcloud auth list
                     '''
                 }
@@ -51,7 +51,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    image_repo = "us-central1-docker.pkg.dev/${env.PROJECT_ID}/${env.microservice}/${env.container}"
+                    image_repo = "asia-south1-docker.pkg.dev/${env.PROJECT_ID}/${env.microservice}/${env.container}"
                     image_tag = "${BUILD_NUMBER}-${env.env_namespace ?: 'dev'}" // fallback if env_namespace not set
                     //image_tag = "${BUILD_NUMBER}" // fallback if env_namespace not set
                     def image_full = "${image_repo}:${image_tag}"
@@ -59,7 +59,7 @@ pipeline {
                     sh """
                         echo '${env.microservice}'
                         echo 'Logging in to Artifact Registry...'
-                        gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
+                        gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://asia-south1-docker.pkg.dev
 
                         echo 'Building Docker image...'
                         docker build -t ${image_full} .

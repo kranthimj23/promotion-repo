@@ -71,9 +71,9 @@ def update_helm_chart_temp(repo_url, image_repo, image_tag, ns, microservice):
         return yaml_path
 
 def main():
-    CLUSTER = "autopilot-cluster-1"
-    ZONE = "us-central1"
-    PROJECT_ID = "speedy-insight-483010-m3"
+    CLUSTER = "mygkecluster"
+    ZONE = "asia-south1"
+    PROJECT_ID = "cloudlearnhub-gke-1546"
 
     if len(sys.argv) != 6:
         print("Usage: deploy_to_gke.py <namespace> <image_repo> <image_tag> <repo_url> <microservice>")
