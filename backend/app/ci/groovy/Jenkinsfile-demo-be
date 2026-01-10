@@ -9,7 +9,7 @@ pipeline {
         CLUSTER = 'mygkecluster'
         REGION = 'asia-south1'
         PYTHON_EXEC = 'python3.11'
-        GIT_CREDENTIALS_ID = credentials('Jenkins-token')
+        GIT_CREDENTIALS_ID = credentials('Jenkins-token-2')
     }
 
     stages {
@@ -17,7 +17,7 @@ pipeline {
             steps {
                 deleteDir()
                 script {
-                    withCredentials([string(credentialsId: 'Jenkins-token', variable: 'GIT_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
                         checkout([
                             $class: 'GitSCM',
                             branches: [[name: "*/dev"]],
@@ -34,7 +34,7 @@ pipeline {
             steps {
                 dir('zdt-manager-src') {
                     script {
-                        withCredentials([string(credentialsId: 'Jenkins-token', variable: 'GIT_TOKEN')]) {
+                        withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
                             checkout([
                                 $class: 'GitSCM',
                                 branches: [[name: "*/zdt-application"]],
@@ -87,7 +87,7 @@ pipeline {
                     gcloud container clusters get-credentials ${CLUSTER} --region ${REGION} --project ${PROJECT_ID}
                 """
                 script {
-                    withCredentials([string(credentialsId: 'Jenkins-token', variable: 'GIT_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
                         def deployScriptPath = "zdt-manager-src/backend/app/ci/scripts/deploy_to_gke.py"
         
                         def pythonCommand = """
