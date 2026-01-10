@@ -93,7 +93,7 @@ pipeline {
         
                         def pythonCommand = """
                             export CLUSTER=${CLUSTER}
-                            export REGION=${REGION}
+                            export ZONE=${ZONE}
                             export PROJECT_ID=${PROJECT_ID}
                             export GIT_TOKEN=${GIT_TOKEN}
                             echo Running Python script...
