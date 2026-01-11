@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         PYTHON_EXEC = 'python3.11'
-        GIT_CREDENTIALS_ID = credentials('git-token-1')
+        GIT_CREDENTIALS_ID = credentials('Jenkins-token-2')
     }
 
     stages {
@@ -11,7 +11,7 @@ pipeline {
             steps {
                 deleteDir()
                 script {
-                    withCredentials([string(credentialsId: 'git-token-1', variable: 'GIT_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
                         checkout([
                             $class: 'GitSCM',
                             branches: [[name: "*/main"]],
@@ -29,7 +29,7 @@ pipeline {
             steps {
                 dir('zdt-manager-src') {
                     script {
-                        withCredentials([string(credentialsId: 'git-token-1', variable: 'GIT_TOKEN')]) {
+                        withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
                             checkout([
                                 $class: 'GitSCM',
                                 branches: [[name: "*/zdt-application"]],
@@ -46,7 +46,7 @@ pipeline {
         stage('Load and Run merger.py') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'git-token-1', variable: 'GIT_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
                         def mergerScript = 'zdt-manager-src/backend/app/cd/scripts/merger.py'
                         def result = sh(
                             script: "${env.PYTHON_EXEC} ${mergerScript} ${env.lower_env} ${env.higher_env} ${env.github_url} ${env.new_version}",
@@ -73,7 +73,7 @@ pipeline {
                     if (env.NEW_BRANCH?.toLowerCase() == 'true') {
                         echo "Triggering Push-Files-To-Branch job for new branch: ${env.X2_BRANCH}"
 
-                        withCredentials([string(credentialsId: 'git-token-1', variable: 'GIT_TOKEN')]) {
+                        withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
                             def scriptPath = 'zdt-manager-src/backend/app/cd/scripts/values-promotion.py'
                             echo "${env.PYTHON_EXEC} ${scriptPath} ${env.github_url} ${env.X2_BRANCH}"
                             sh "${env.PYTHON_EXEC} ${scriptPath} ${env.github_url} ${env.X2_BRANCH}"
@@ -89,7 +89,7 @@ pipeline {
             steps {
                 script {
                     if (env.X1_BRANCH && env.X2_BRANCH) {
-                        withCredentials([string(credentialsId: 'git-token-1', variable: 'GIT_TOKEN')]) {
+                        withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
                             def releaseNoteScript = 'zdt-manager-src/backend/app/cd/scripts/create-release-note.py'
                             def mergerScript = 'zdt-manager-src/backend/app/cd/scripts/database_scripts_merger.py'
                             def driftScript  = 'zdt-manager-src/backend/infra/cd/scripts/drift_lower_env.py'
