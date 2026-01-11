@@ -1,18 +1,23 @@
 pipeline {
     agent any
+    
     environment {
         PYTHON_EXEC = 'python3.11'
         GIT_CREDENTIALS_ID = credentials('Jenkins-token-2')
+        WORKSPACE_DIR = "${WORKSPACE}"
+        SCRIPTS_DIR = "${WORKSPACE}/zdt-manager-src/backend/app/cd/scripts"
+        INFRA_SCRIPTS_DIR = "${WORKSPACE}/zdt-manager-src/backend/infra/cd/scripts"
     }
 
     stages {
         stage('Install Dependencies') {
             steps {
-                        sh '''
-                                python3.11 -m pip install openpyxl
-                            '''
-                }
-                }
+                sh '''
+                    echo "Installing Python dependencies..."
+                    python3.11 -m pip install openpyxl --user
+                '''
+            }
+        }
 
         stage('Checkout with credentials') {
             steps {
@@ -24,9 +29,15 @@ pipeline {
                             branches: [[name: "*/main"]],
                             userRemoteConfigs: [[
                                 url: "${env.github_url}",
-                                credentialsId: env.GIT_CREDENTIALS_ID
+                                credentialsId: 'Jenkins-token-2'
                             ]]
                         ])
+                        
+                        // Configure git
+                        sh '''
+                            git config user.email "jenkins@example.com"
+                            git config user.name "Jenkins CI"
+                        '''
                     }
                 }
             }
@@ -44,6 +55,11 @@ pipeline {
                                     url: "https://${GIT_TOKEN}@github.com/kranthimj23/zdt-manager-src.git"
                                 ]]
                             ])
+                            
+                            sh '''
+                                git config user.email "jenkins@example.com"
+                                git config user.name "Jenkins CI"
+                            '''
                         }
                     }
                 }
@@ -54,21 +70,32 @@ pipeline {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
-                        def mergerScript = 'zdt-manager-src/backend/app/cd/scripts/merger.py'
-                        def result = sh(
-                            script: "${env.PYTHON_EXEC} ${mergerScript} ${env.lower_env} ${env.higher_env} ${env.github_url} ${env.new_version}",
-                            returnStdout: true
-                        ).trim()
+                        sh '''
+                            echo "Running merger.py script..."
+                            cd ${WORKSPACE_DIR}
+                            ${PYTHON_EXEC} ${SCRIPTS_DIR}/merger.py ${env.lower_env} ${env.higher_env} ${env.github_url} ${env.new_version}
+                        '''
 
                         echo "Wait time of 5 secs"
                         sleep time: 5, unit: 'SECONDS'
 
-                        def (x1, x2, low, high, isNew) = result.tokenize(',').collect { it?.trim() ?: '' }
-                        env.X1_BRANCH = x1
-                        env.X2_BRANCH = x2
-                        env.LOWER_ENV = low
-                        env.HIGHER_ENV = high
-                        env.NEW_BRANCH = isNew?.toLowerCase() ?: 'false'
+                        // Parse the output from merger.py
+                        def result = sh(
+                            script: '''
+                                cd ${WORKSPACE_DIR}
+                                ${PYTHON_EXEC} ${SCRIPTS_DIR}/merger.py ${env.lower_env} ${env.higher_env} ${env.github_url} ${env.new_version}
+                            ''',
+                            returnStdout: true
+                        ).trim()
+
+                        def parts = result.tokenize(',')
+                        env.X1_BRANCH = parts.size() > 0 ? parts[0]?.trim() : ''
+                        env.X2_BRANCH = parts.size() > 1 ? parts[1]?.trim() : ''
+                        env.LOWER_ENV = parts.size() > 2 ? parts[2]?.trim() : env.lower_env
+                        env.HIGHER_ENV = parts.size() > 3 ? parts[3]?.trim() : env.higher_env
+                        env.NEW_BRANCH = parts.size() > 4 ? parts[4]?.trim()?.toLowerCase() : 'false'
+                        
+                        echo "Parsed branches: X1=${env.X1_BRANCH}, X2=${env.X2_BRANCH}, NEW_BRANCH=${env.NEW_BRANCH}"
                     }
                 }
             }
@@ -77,13 +104,15 @@ pipeline {
         stage('Trigger Push-Files-To-Branch') {
             steps {
                 script {
-                    if (env.NEW_BRANCH?.toLowerCase() == 'true') {
+                    if (env.NEW_BRANCH == 'true') {
                         echo "Triggering Push-Files-To-Branch job for new branch: ${env.X2_BRANCH}"
 
                         withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
-                            def scriptPath = 'zdt-manager-src/backend/app/cd/scripts/values-promotion.py'
-                            echo "${env.PYTHON_EXEC} ${scriptPath} ${env.github_url} ${env.X2_BRANCH}"
-                            sh "${env.PYTHON_EXEC} ${scriptPath} ${env.github_url} ${env.X2_BRANCH}"
+                            sh '''
+                                echo "Running values-promotion.py script..."
+                                cd ${WORKSPACE_DIR}
+                                ${PYTHON_EXEC} ${SCRIPTS_DIR}/values-promotion.py ${env.github_url} ${env.X2_BRANCH}
+                            '''
                         }
                     } else {
                         echo "Skipping Push-Files-To-Branch because NEW_BRANCH is not 'true'. Got: '${env.NEW_BRANCH}'"
@@ -97,34 +126,81 @@ pipeline {
                 script {
                     if (env.X1_BRANCH && env.X2_BRANCH) {
                         withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
-                            def releaseNoteScript = 'zdt-manager-src/backend/app/cd/scripts/create-release-note.py'
-                            def mergerScript = 'zdt-manager-src/backend/app/cd/scripts/database_scripts_merger.py'
-                            def driftScript  = 'zdt-manager-src/backend/infra/cd/scripts/drift_lower_env.py'
-
-                            sh "chmod +x ${mergerScript}"
-                            echo "Running create-release-note.py with: ${env.X1_BRANCH}, ${env.X2_BRANCH}, ${env.LOWER_ENV}, ${env.HIGHER_ENV}, ${env.github_url}"
-                            // Clean up potential file conflicts
                             sh '''
-                                cd /var/lib/jenkins/workspace/create-release-note
+                                echo "Preparing release notes generation..."
+                                cd ${WORKSPACE_DIR}
                                 
-                                # Remove any files that should be directories
-                                [ -f "generate-config" ] && rm -f generate-config
-                                [ -f "generate-config/promotion-x" ] && rm -f generate-config/promotion-x
-                                [ -f "generate-config/promotion-x-1" ] && rm -f generate-config/promotion-x-1
+                                # Make scripts executable
+                                chmod +x ${SCRIPTS_DIR}/database_scripts_merger.py
                                 
-                                # Or just clean the entire generate-config directory
+                                # Clean up generate-config directory if it exists as a file
+                                if [ -f "generate-config" ]; then
+                                    echo "Removing file: generate-config"
+                                    rm -f generate-config
+                                fi
+                                
+                                # Create clean generate-config directory
                                 rm -rf generate-config
+                                mkdir -p generate-config
+                                
+                                echo "Running create-release-note.py with:"
+                                echo "  X1_BRANCH: ${X1_BRANCH}"
+                                echo "  X2_BRANCH: ${X2_BRANCH}"
+                                echo "  LOWER_ENV: ${LOWER_ENV}"
+                                echo "  HIGHER_ENV: ${HIGHER_ENV}"
+                                echo "  GITHUB_URL: ${github_url}"
+                                
+                                ${PYTHON_EXEC} ${SCRIPTS_DIR}/create-release-note.py \
+                                    ${X1_BRANCH} \
+                                    ${X2_BRANCH} \
+                                    ${LOWER_ENV} \
+                                    ${HIGHER_ENV} \
+                                    ${github_url} \
+                                    ${SCRIPTS_DIR}/database_scripts_merger.py
                             '''
-                            sh "${env.PYTHON_EXEC} ${releaseNoteScript} ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV} ${env.github_url} ${mergerScript}"
-
-                            // If you want to run drift_lower_env.py too, uncomment below:
-                            // sh "${env.PYTHON_EXEC} ${driftScript} ${env.github_url} ${env.X1_BRANCH} ${env.X2_BRANCH} ${env.LOWER_ENV} ${env.HIGHER_ENV}"
                         }
                     } else {
                         echo "Skipping release note generation because required branches are missing."
+                        echo "X1_BRANCH: ${env.X1_BRANCH}, X2_BRANCH: ${env.X2_BRANCH}"
                     }
                 }
             }
+        }
+
+        // Optional: Uncomment if you want to run drift check
+        // stage('Run Drift Check') {
+        //     steps {
+        //         script {
+        //             if (env.X1_BRANCH && env.X2_BRANCH) {
+        //                 withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
+        //                     sh '''
+        //                         echo "Running drift check..."
+        //                         cd ${WORKSPACE_DIR}
+        //                         ${PYTHON_EXEC} ${INFRA_SCRIPTS_DIR}/drift_lower_env.py \
+        //                             ${github_url} \
+        //                             ${X1_BRANCH} \
+        //                             ${X2_BRANCH} \
+        //                             ${LOWER_ENV} \
+        //                             ${HIGHER_ENV}
+        //                     '''
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+    }
+
+    post {
+        always {
+            echo "Cleaning up workspace..."
+            // Optionally clean workspace after build
+            // cleanWs()
+        }
+        success {
+            echo "✓ Pipeline executed successfully!"
+        }
+        failure {
+            echo "✗ Pipeline failed. Check console output above for details."
         }
     }
 }
