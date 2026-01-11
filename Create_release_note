@@ -6,6 +6,13 @@ pipeline {
     }
 
     stages {
+        stage('Install Dependencies') {
+            steps {
+                        sh '''
+                                python3.11 -m pip install openpyxl
+                            '''
+                }
+                }
 
         stage('Checkout with credentials') {
             steps {
