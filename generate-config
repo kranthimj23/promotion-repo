@@ -100,7 +100,7 @@ pipeline {
             steps {
                 script {
                     withCredentials([
-                        string(credentialsId: env.GIT_CREDENTIALS_ID, variable: 'GIT_TOKEN')
+                        string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')
                     ]) {
                        // def driftPromotionPath = "${WORKSPACE}/zdt-manager-src/backend/infra/cd/scripts/drift_promotion.py"
                         def generateConfigPath = "${WORKSPACE}/zdt-manager-src/backend/app/cd/scripts/generate-config.py"
