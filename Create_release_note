@@ -83,7 +83,7 @@ pipeline {
                         withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
                             def scriptPath = 'zdt-manager-src/backend/app/cd/scripts/values-promotion.py'
                             echo "${env.PYTHON_EXEC} ${scriptPath} ${env.github_url} ${env.X2_BRANCH}"
-                            sh "${env.PYTHON_EXEC} ${scriptPath} ${env.github_url} ${env.X2_BRANCH}"
+                            sh "${env.PYTHON_EXEC} ${scriptPath} ${env.github_url} ${env.X2_BRANCH} ${env.app-repo-list}"
                         }
                     } else {
                         echo "Skipping Push-Files-To-Branch because NEW_BRANCH is not 'true'. Got: '${env.NEW_BRANCH}'"
