@@ -791,8 +791,8 @@ def main():
         promote_branch_x_1 = sys.argv[1]
         # promote_branch_x = input("Enter the branch containing the updated files for release: ")
         promote_branch_x = sys.argv[2]
-        target_folder_x_1 = os.path.join(os.getcwd(), "generate-config", "promotion-x-1", f"{repo_name}")
-        target_folder_x = os.path.join(os.getcwd(), "generate-config", "promotion-x", f"{repo_name}")
+        target_folder_x_1 = os.path.join(os.getcwd(), "generate-configs", "promotion-x-1", f"{repo_name}")
+        target_folder_x = os.path.join(os.getcwd(), "generate-configs", "promotion-x", f"{repo_name}")
  
     envs.append(sys.argv[3].strip())
     envs.append(sys.argv[4].strip())
