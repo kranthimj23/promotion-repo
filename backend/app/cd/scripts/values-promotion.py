@@ -7,7 +7,7 @@ import tempfile
 import sys
  
 # ------------------ CONFIGURATION ------------------ #
-app_raw_list = os.getenv('app-repo-list', '')
+app_raw_list = os.getenv('app_repo_list', '')
 app_repo_list = [item.strip() for item in app_raw_list.split('\n') if item.strip()]
 print("Parsed list:", app_repo_list)
  
