@@ -25,7 +25,7 @@ pipeline {
             steps {
                 deleteDir()
                 script {
-                    withCredentials([string(credentialsId: env.GIT_CREDENTIALS_ID, variable: 'GIT_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
                         checkout([
                             $class: 'GitSCM',
                             branches: [[name: "*/${env.promotion_branch_x}"]],
@@ -43,7 +43,7 @@ pipeline {
             steps {
                 dir('zdt-manager-src') {
                     script {
-                        withCredentials([string(credentialsId: env.GIT_CREDENTIALS_ID, variable: 'GIT_TOKEN')]) {
+                        withCredentials([string(credentialsId: 'Jenkins-token-2', variable: 'GIT_TOKEN')]) {
                             checkout([
                                 $class: 'GitSCM',
                                 branches: [[name: "*/zdt-application"]],
