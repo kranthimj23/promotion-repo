@@ -4,7 +4,7 @@ pipeline {
 
     environment {
         PYTHON_EXEC = 'python3.11'
-        GIT_CREDENTIALS_ID = 'git-token-1'
+        GIT_CREDENTIALS_ID = 'Jenkins-token-2'
         PROJECT_ID = 'mobile-app-1-482109'
         CLUSTER = 'autopilot-cluster-1'
         ZONE = 'us-central1'
