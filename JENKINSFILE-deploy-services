@@ -4,10 +4,10 @@ pipeline {
 
     environment {
         PYTHON_EXEC = 'python3.11'
-        GIT_CREDENTIALS_ID = 'git-token-1'
-        PROJECT_ID = 'mobile-app-1-482109'
-        CLUSTER = 'autopilot-cluster-1'
-        ZONE = 'us-central1'
+        GIT_CREDENTIALS_ID = 'Jenkins-token-2'
+        PROJECT_ID = 'cloudlearnhub-gke-1546'
+        CLUSTER = 'mygkecluster'
+        ZONE = 'asia-south1-a'
     }
 
     options {
