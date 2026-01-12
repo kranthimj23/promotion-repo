@@ -31,7 +31,7 @@ pipeline {
                             branches: [[name: "*/${env.promotion_branch_x}"]],
                             userRemoteConfigs: [[
                                 url: "https://${GIT_TOKEN}@github.com/kranthimj23/promotion-repo.git",
-                                credentialsId: env.GIT_CREDENTIALS_ID
+                                // credentialsId: env.GIT_CREDENTIALS_ID
                             ]]
                         ])
                     }
