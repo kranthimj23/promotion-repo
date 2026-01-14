@@ -1,6 +1,6 @@
 project_id   = "nice-virtue-463917-m0"
-region       = "asia-south1"
-zone       = "asia-south1-a"
+region       = "us-central1"
+zone       = "us-central1-a"
 cluster_name = "demo-gke-cluster"
 db_instance_name = "demo-postgres-db"
 vm_name = "demo-jenkins-vm"

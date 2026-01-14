@@ -1,6 +1,6 @@
 project_id   = "nice-virtue-463917-m0"
-region       = "asia-south1"
-zone       = "asia-south1-a"
+region       = "us-central1"
+zone       = "us-central1-a"
 topic_names = [
   "topic-1", "topic-2", "topic-3", "topic-4", "topic-5",
   "topic-6", "topic-7", "topic-8", "topic-9", "topic-10"
