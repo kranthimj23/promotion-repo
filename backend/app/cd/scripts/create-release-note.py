@@ -534,7 +534,7 @@ def write_changes_to_excel(changes, release_note_path, envs, env_list):
 
     # Helper to safely convert dicts to JSON strings for Excel
     def safe_excel_value(val):
-        if isinstance(val, dict):
+        if isinstance(val, (dict, list)):
             return json.dumps(val)
         if val is None:
             return ''
