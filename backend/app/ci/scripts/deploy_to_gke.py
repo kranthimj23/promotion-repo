@@ -72,8 +72,8 @@ def update_helm_chart_temp(repo_url, image_repo, image_tag, ns, microservice):
 
 def main():
     CLUSTER = "mygkecluster"
-    REGION = "us-central1"
-    ZONE = "us-central1-a"
+    REGION = "asia-south1"
+    ZONE = "asia-south1-a"
     PROJECT_ID = "cloudlearnhub-gke-1546"
 
     if len(sys.argv) != 6:
