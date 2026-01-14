@@ -7,8 +7,8 @@ pipeline {
     environment {
         PROJECT_ID = 'cloudlearnhub-gke-1546'
         CLUSTER = 'mygkecluster'
-        REGION = 'asia-south1'
-        ZONE = 'asia-south1-a'
+        REGION = 'us-central1'
+        ZONE = 'us-central1-a'
         PYTHON_EXEC = 'python3.11'
         GIT_CREDENTIALS_ID = credentials('Jenkins-token-2')
     }
@@ -54,7 +54,7 @@ pipeline {
                 // Uses VM's attached service account - no key file needed
                 sh '''
                     gcloud config set project cloudlearnhub-gke-1546
-                    gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+                    gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
                     echo "Using VM attached service account:"
                     gcloud auth list
                 '''
@@ -64,13 +64,13 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    image_repo = "asia-south1-docker.pkg.dev/${env.PROJECT_ID}/demo-database/database"
+                    image_repo = "us-central1-docker.pkg.dev/${env.PROJECT_ID}/demo-database/database"
                     image_tag = "${BUILD_NUMBER}-${env.env_namespace ?: 'dev'}"
                     def image_full = "${image_repo}:${image_tag}"
 
                     sh """
                         echo 'Logging in to Artifact Registry...'
-                        gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://asia-south1-docker.pkg.dev
+                        gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
 
                         echo 'Building Docker image...'
                         docker build -t ${image_full} .
