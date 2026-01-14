@@ -8,7 +8,7 @@
     ]
   },
   "image": {
-    "imageName": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-admin/admin:14-sit",
+    "imageName": "us-central1-docker.pkg.dev/nice-virtue-463917-m0/service-admin/admin:14-sit",
     "pullPolicy": "IfNotPresent",
     "repository": "asia‑south1‑docker.pkg.dev/nice‑virtue‑463917‑m0/service‑admin/admin",
     "tag": "12‑sit"
@@ -29,7 +29,7 @@
       ]
     },
     "image": {
-      "imageName": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-auth/auth:12-sit",
+      "imageName": "us-central1-docker.pkg.dev/nice-virtue-463917-m0/service-auth/auth:12-sit",
       "pullPolicy": "IfNotPresent",
       "repository": "asia‑south1‑docker.pkg.dev/nice‑virtue‑463917‑m0/service‑auth/auth",
       "tag": "12‑sit"
@@ -52,7 +52,7 @@
       ]
     },
     "image": {
-      "imageName": "asia-south1-docker.pkg.dev/nice-virtue-463917-m0/service-user/user:48-sit",
+      "imageName": "us-central1-docker.pkg.dev/nice-virtue-463917-m0/service-user/user:48-sit",
       "pullPolicy": "IfNotPresent",
       "repository": "asia‑south1‑docker.pkg.dev/nice‑virtue‑463917‑m0/service‑user/user",
       "tag": "48‑sit"

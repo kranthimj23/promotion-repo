@@ -7,7 +7,7 @@ pipeline {
         GIT_CREDENTIALS_ID = 'Jenkins-token-2'
         PROJECT_ID = 'cloudlearnhub-gke-1546'
         CLUSTER = 'mygkecluster'
-        ZONE = 'asia-south1-a'
+        ZONE = 'us-central1-a'
     }
 
     options {
