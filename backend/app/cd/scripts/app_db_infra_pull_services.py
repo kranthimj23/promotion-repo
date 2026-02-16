@@ -5,6 +5,12 @@ import subprocess
 from pathlib import Path
 import tempfile
 import sys
+
+from git_helpers import (
+    run_git_command,
+    configure_git_user,
+    stage_commit_and_push,
+)
  
 # ------------------ CONFIGURATION ------------------ #
 app_raw_list = os.getenv('app-repo-list', '')
@@ -37,16 +43,6 @@ destination_sql_relative_path = os.path.join("helm-charts", "dev2-values", "db-s
 destination_infra_relative_path = os.path.join("helm-charts", "dev2-values", "infra-values")
  
 # ---------------------- FUNCTIONS ----------------------------- #
- 
-def run_git_command(cmd, cwd=None):
-    print(f"Running: {cmd} in {cwd}")
-    result = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True, check=True, timeout=30)
-    if result.returncode != 0:
-        print(f" Git command failed:\nCommand: {cmd}\nReturn Code: {result.returncode}")
-        print(f"Stdout: {result.stdout}")
-        print(f"Stderr: {result.stderr}")
-        raise subprocess.CalledProcessError(result.returncode, cmd, output=result.stdout, stderr=result.stderr)
-    return result.stdout.strip()
  
 def prepare_promotion_repo(promotion_repo_url, workspace, branch):
     promo_repo_path = os.path.join(workspace, "promotion")
@@ -239,12 +235,13 @@ def main():
                 print(f"Missing Infra file: {dest_infra_file_path}")
                
  
-        # Commit and push changes
-        subprocess.run(['git', 'config', 'user.email', 'surabhi.h@qwerty.com'], cwd=promo_repo_path, check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', ''], cwd=promo_repo_path, check=True, timeout=30)
-        run_git_command("git add .", cwd=promo_repo_path)
-        run_git_command(f'git commit -m "Sync dev2-values from all services"', cwd=promo_repo_path)
-        run_git_command(f'git push origin {target_branch}', cwd=promo_repo_path)
+        configure_git_user(promo_repo_path)
+        stage_commit_and_push(
+            promo_repo_path,
+            target_branch,
+            'Sync dev2-values from all services',
+            pull_before_push=False,
+        )
  
         print("Promotion repository updated successfully.")
     except Exception as e:
