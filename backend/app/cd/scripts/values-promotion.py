@@ -7,24 +7,31 @@ import tempfile
 import sys
  
 # ------------------ CONFIGURATION ------------------ #
-app_raw_list = os.getenv('app_repo_list', '')
-app_repo_list = [item.strip() for item in app_raw_list.split('\n') if item.strip()]
-print("Parsed list:", app_repo_list)
- 
-#aql_db_raw_list = os.getenv('aql-db-repo-list', '')
-#aql_db_repo_list = [item.strip() for item in aql_db_raw_list.split('\n') if item.strip()]
-#print("Parsed list:", aql_db_repo_list)
- 
-#sql_db_raw_list = os.getenv('sql-db-repo-list', '')
-#sql_db_repo_list = [item.strip() for item in sql_db_raw_list.split('\n') if item.strip()]
-#print("Parsed list:", sql_db_repo_list)
- 
-#infra_raw_list = os.getenv('infra-repo-list', '')
-#infra_repo_list = [item.strip() for item in infra_raw_list.split('\n') if item.strip()]
-#print("Parsed list:", infra_repo_list)
- 
-promotion_repo = sys.argv[1]
-target_branch = sys.argv[2]
+# Read app_repo_list from file instead of environment variable
+services_list_file = sys.argv[1]
+promotion_repo = sys.argv[2]
+target_branch = sys.argv[3]
+
+# Validate that services_list_file exists
+if not os.path.exists(services_list_file):
+    print(f"Error: Services list file '{services_list_file}' not found.")
+    sys.exit(1)
+
+# Read app repositories from file
+try:
+    with open(services_list_file, 'r') as f:
+        app_repo_list = [line.strip() for line in f.readlines() if line.strip()]
+    print(f"Parsed {len(app_repo_list)} repositories from {services_list_file}:")
+    for repo in app_repo_list:
+        print(f"  - {repo}")
+except Exception as e:
+    print(f"Error reading services list file: {e}")
+    sys.exit(1)
+
+if not app_repo_list:
+    print("Error: No repositories found in services list file.")
+    sys.exit(1)
+
 temp_dir = tempfile.mkdtemp()
 
 github_token = os.getenv("GIT_TOKEN")
@@ -95,10 +102,11 @@ def main():
     # ------------------ APP REPOS ------------------ #
     for repo in app_repo_list:
         try:
+            repo_with_auth = repo
             if github_token and "github.com" in repo:
                 # Inject token into repo URL (safe for HTTPS GitHub URLs)
                 if repo.startswith("https://"):
-                    repo = repo.replace("https://", f"https://{github_token}@")
+                    repo_with_auth = repo.replace("https://", f"https://{github_token}@")
                 else:
                     raise ValueError("Unsupported repo_url format. Must start with https://")
             app_temp_dir = tempfile.mkdtemp()
@@ -107,10 +115,10 @@ def main():
             os.makedirs(app_temp_dir)
             repo_name = Path(repo).stem
             repo_path = os.path.join(app_temp_dir, repo_name)
-            run_git_command(f"git clone --branch main {repo}", cwd=app_temp_dir)
- 
+            run_git_command(f"git clone --branch main {repo_with_auth}", cwd=app_temp_dir)
+
             source_path = os.path.join(repo_path, source_app_relative_path)
-            print("Ssssooouurrccee", source_path)
+            print(f"Source path: {source_path}")
             yaml_files = []
             if os.path.exists(source_path):
                 yaml_files = [(f.name, f.read_text()) for f in Path(source_path).glob("*.yaml")]

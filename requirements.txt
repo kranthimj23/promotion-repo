@@ -1,0 +1,6 @@
+pandas
+openpyxl
+PyYAML
+python-hcl2
+numpy
+

@@ -792,7 +792,7 @@ def main():
         print("These are the folder: ",foldername)
         if foldername == "helm-charts":
             for filename in os.listdir(release_note_path):
-                if filename.startswith("release-note"):
+                if filename.startswith("release-note") and "verified" in filename:
                     excel_file_path =  os.path.join(release_note_path,filename)
                     print("Excel file path: ", excel_file_path)
                 else:
