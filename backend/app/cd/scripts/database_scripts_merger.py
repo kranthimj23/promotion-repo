@@ -5,6 +5,16 @@ from openpyxl import load_workbook, Workbook
 import tempfile
 import re
 import sys
+
+from git_helpers import (
+    inject_git_token,
+    clone_single_branch_and_checkout,
+    clone_repo_and_checkout,
+    is_base_branch_exists,
+    configure_git_user,
+    stage_commit_and_push,
+    stage_specific_files_commit_and_push,
+)
  
 def add_value_to_columns(file_path, sheet_name, file_name, branch_name):
     if os.path.exists(file_path):
@@ -62,34 +72,27 @@ def add_value_to_columns(file_path, sheet_name, file_name, branch_name):
  
 def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
     repo_path = tempfile.mkdtemp()
- 
+
     print(os.path.dirname(repo_path))
     try:
-        # Clone repository
-        subprocess.run(['git', 'clone', '-b', 'master', repo_url, repo_path],
-                      check=True, capture_output=True)
- 
-        # Verify branch exists
-        branch_check = subprocess.run(['git', 'ls-remote', '--heads', repo_url, promote_branch],
-                                     capture_output=True, text=True)
-        if not branch_check.stdout:
+        repo_url = inject_git_token(repo_url)
+        clone_single_branch_and_checkout(repo_url, 'master', repo_path)
+
+        if not is_base_branch_exists(repo_url, promote_branch):
             raise ValueError(f"Branch {promote_branch} does not exist in repository")
- 
+
         print("Step1")
         print(os.path.dirname(repo_path))
-        # Process Excel file
         excel_path = os.path.join(repo_path, 'meta-sheet.xlsx')
         wb = load_workbook(excel_path)
         ws = wb.active
- 
-        # Find column indices
+
         headers = [cell.value for cell in ws[1]]
         lower_col = headers.index(lower_env) + 1
         higher_col = headers.index(higher_env) + 1
- 
-        # Update logic
+
         updated = False
-        for row in ws.iter_rows(min_row=2):  # Skip header
+        for row in ws.iter_rows(min_row=2):
             if row[lower_col-1].value == promote_branch:
                 row[higher_col-1].value = promote_branch
                 updated = True
@@ -97,26 +100,26 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
         print("Step2")
         if not updated:
             raise ValueError(f"{promote_branch} not found in {lower_env} column")
- 
-        # Save changes
+
         wb.save(excel_path)
- 
-        # Commit and push changes
-        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =repo_path ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd =repo_path, check=True, timeout=30)
-        subprocess.run(['git', '-C', repo_path, 'add', 'meta-sheet.xlsx'], cwd =repo_path, check=True, capture_output=True, text=True)
-        subprocess.run(['git', '-C', repo_path, 'commit', '-m',
-                      f'Promote {promote_branch} from {lower_env} to {higher_env}'], cwd =repo_path, check=True,capture_output=True, text=True)
-        subprocess.run(['git', '-C', repo_path, 'push', 'origin', 'master'], cwd =repo_path, check=True,capture_output=True, text=True)
- 
+
+        configure_git_user(repo_path)
+        stage_specific_files_commit_and_push(
+            repo_path,
+            'master',
+            f'Promote {promote_branch} from {lower_env} to {higher_env}',
+            ['meta-sheet.xlsx'],
+            pull_before_push=False,
+        )
+
         shutil.rmtree(repo_path, ignore_errors=True)
- 
+
         return True
- 
+
     except subprocess.CalledProcessError as e:
         print(f"Git operation failed: {e.stderr}")
         return False
- 
+
     except Exception as e:
         print(f"An error occurred: {e}")
         return False
@@ -124,8 +127,8 @@ def update_meta_sheet(lower_env, higher_env, promote_branch, repo_url):
  
 def get_branch_range(lower_env, higher_env):
     temp_dir = tempfile.mkdtemp()
- 
-    clone_repo(github_url, 'master', temp_dir)
+
+    clone_single_branch_and_checkout(github_url, 'master', temp_dir)
     for i in os.listdir(temp_dir):
         if i.startswith("meta-sheet"):
             file_path = os.path.join(temp_dir,i)
@@ -360,47 +363,23 @@ def merge_branches(branches, promotion_branch, aql_folder, sql_folder, lower_env
  
             subprocess.run(["git", "add", folder])
             print(f"Added all new files in {folder} to staging")
- 
-        # Merge AQL files
+
         merge_files(".aql", aql_folder, branches, promotion_branch)
- 
-        # Merge SQL files
-        # merge_files(".sql", sql_folder, branches, promotion_branch)
- 
-        # Commit the changes
-        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =os.getcwd() ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'],cwd =os.getcwd(), check=True, timeout=30)
-        print("Committing changes...")
-        subprocess.run(["git", "commit", "-m", "Merged AQL and SQL files from multiple branches"], cwd =os.getcwd() ,check=True, timeout=30)
- 
-        # Push the changes to the UAT branch
-        print(f"Pushing changes to {promotion_branch}...")
-        subprocess.run(["git", "push", "origin", promotion_branch], cwd =os.getcwd() ,check=True, timeout=30)
- 
+
+        configure_git_user(os.getcwd())
+        stage_commit_and_push(
+            os.getcwd(),
+            promotion_branch,
+            'Merged AQL and SQL files from multiple branches',
+            pull_before_push=False,
+        )
+
         print("Merge and push complete!")
- 
+
     except subprocess.CalledProcessError as e:
         print(f"Error: {e}")
         print(e.output)
  
-def clone_repo(repo_url, branch_name, target_folder):
-    try:
-        if os.path.exists(target_folder):
-            shutil.rmtree(target_folder)
-        os.makedirs(target_folder)  # Create the target folder
-    except Exception as e:
-        print(f"Error creating folder '{target_folder}': {e}")
-        return
- 
-    # Clone the specified branch into the target folder
-    try:
-        subprocess.run(
-            ["git", "clone", "--branch", branch_name, repo_url, target_folder],
-            check=True
-        )
-        print(f"Successfully cloned '{branch_name}' branch into '{target_folder}'.")
-    except subprocess.CalledProcessError as e:
-        print(f"Error cloning the repository: {e}")
  
  
 if __name__ == "__main__":
@@ -415,7 +394,8 @@ if __name__ == "__main__":
     release_note_path = sys.argv[4]
     release_note = os.path.join(main_temp_dir, release_note_path)
     print(release_note)
-    clone_repo(github_url, promotion_branch_name, main_temp_dir)
+    github_url = inject_git_token(github_url)
+    clone_single_branch_and_checkout(github_url, promotion_branch_name, main_temp_dir)
     os.chdir(main_temp_dir) #change directory to target
     merge_branches(branches_to_merge, promotion_branch_name, aql_folder_name, sql_folder_name,lower_env,higher_env)
     #update_meta_sheet(lower_env, higher_env, promotion_branch_name, github_url)

@@ -11,30 +11,22 @@ import stat
 from filecmp import cmp
 import datetime
 from openpyxl.utils import get_column_letter
+
+from git_helpers import (
+    inject_git_token,
+    is_base_branch_exists,
+    clone_single_branch_and_checkout,
+    clone_branch_and_checkout_new_branch,
+    configure_git_user,
+    stage_commit_and_push,
+    stage_specific_files_commit_and_push,
+)
  
  
 ########################################################################################################################
 #### To clone the meta sheet####
 ########################################################################################################################
  
-def clone_repo_master(github_url, branch_name, target_folder):
-    try:
-        if os.path.exists(target_folder):
-            shutil.rmtree(target_folder)
-        os.makedirs(target_folder)  # Create the target folder
-    except Exception as e:
-        #print(f"Error creating folder '{target_folder}': {e}")
-        return
- 
-    # Clone the specified branch into the target folder
-    try:
-        subprocess.run(
-            ["git", "clone", "--branch", branch_name, github_url, target_folder],
-            check=True, stdout=subprocess.DEVNULL
-        )
-        ##print(f"Successfully cloned '{branch_name}' branch into '{target_folder}'.")
-    except subprocess.CalledProcessError as e:
-        print(f"Error cloning the repository: {e}")
         
  
 ########################################################################################################################
@@ -151,86 +143,63 @@ def create_github_branch(github_url, base_branch, new_branch):
     """
     temp_dir = tempfile.mkdtemp()
     try:
-        # Verify base branch exists
-        ls_remote = subprocess.run(
-            ['git', 'ls-remote', '--heads', github_url, base_branch],
-            capture_output=True,
-            text=True,
-            check=True
-        )
- 
-        if not ls_remote.stdout:
+        if not is_base_branch_exists(github_url, base_branch):
             raise ValueError(f"Base branch '{base_branch}' not found in repository")
- 
-        # Clone repository for new branch creation
+
         new_branch_dir = os.path.join(temp_dir, "new_branch")
-        subprocess.run(
-            ['git', 'clone', '--single-branch', '-b', base_branch, github_url, new_branch_dir],
-            check=True,timeout = 30, stdout=subprocess.DEVNULL
-        )
-        # Create and switch to new branch
-        subprocess.run(['git', 'checkout', '-b', new_branch], cwd=new_branch_dir, check=True, timeout=30)
-        # Clean  environment folders
+        clone_branch_and_checkout_new_branch(github_url, base_branch, new_branch, new_branch_dir)
+
         clean_non_dev_folders(new_branch_dir)
-        #print(f"Created '{new_branch}' --------successfully")
-        # Commit and push cleaned branch
-        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd=new_branch_dir, check=True, timeout=30,)
-        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd=new_branch_dir, check=True, timeout=30)
-        subprocess.run(['git', 'add', '.'], cwd=new_branch_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
-        subprocess.run(
-            ['git', 'commit', '-m', f'Initialize {new_branch}: Clean  environment folders'],
-            cwd=new_branch_dir, check=True, timeout=30, stdout=subprocess.DEVNULL
+
+        configure_git_user(new_branch_dir)
+        stage_commit_and_push(
+            new_branch_dir,
+            new_branch,
+            f'Initialize {new_branch}: Clean environment folders',
+            pull_before_push=False,
         )
-        result = subprocess.run(['git', 'push', 'origin', new_branch], cwd=new_branch_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
-        #print(f"Created and cleaned branch '{new_branch}' successfully")
-        # Update meta-sheet in master branch
+
         master_dir = os.path.join(temp_dir, "master")
-        subprocess.run(['git', 'clone', '-b', 'master', github_url, master_dir], check=True, timeout=30, stdout=subprocess.DEVNULL)
- 
-        # Load and update Excel file
+        clone_single_branch_and_checkout(github_url, 'master', master_dir)
+
         excel_path = os.path.join(master_dir, 'meta-sheet.xlsx')
         wb = load_workbook(excel_path)
         ws = wb.active
- 
-        # Find 'dev' column
+
         headers = [cell.value for cell in ws[1]]
         dev_col = headers.index('dev') + 1
- 
-        # Find first empty row in dev column
+
         next_row = 2
         while ws.cell(row=next_row, column=dev_col).value:
             next_row += 1
- 
-        # Add new branch name
+
         ws.cell(row=next_row, column=dev_col).value = new_branch
- 
-        # Fill empty cells in other columns with 'X'
+
         for col in range(1, ws.max_column + 1):
             if col == dev_col:
-                continue  # Skip dev column
+                continue
             cell = ws.cell(row=next_row, column=col)
-            if not cell.value:  # Check if cell is empty
+            if not cell.value:
                 cell.value = 'X'
- 
+
         wb.save(excel_path)
- 
-        # Commit and push changes
-        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd=master_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
-        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd=master_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
-        subprocess.run(['git', 'add', 'meta-sheet.xlsx'], cwd=master_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
-        subprocess.run(['git', 'commit', '-m', f'Add {new_branch} to meta-sheet'], cwd=master_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
-        subprocess.run(['git', 'push', 'origin', 'master'], cwd=master_dir, check=True, timeout=30, stdout=subprocess.DEVNULL)
-        #print(f"Updated meta-sheet.xlsx with branch '{new_branch}'")
- 
+
+        configure_git_user(master_dir)
+        stage_specific_files_commit_and_push(
+            master_dir,
+            'master',
+            f'Add {new_branch} to meta-sheet',
+            ['meta-sheet.xlsx'],
+            pull_before_push=False,
+        )
+
     except subprocess.CalledProcessError as e:
-        #print(f"Git operation failed: {e.stderr}")
         return False
     except Exception as e:
-        #print(f"Error: {str(e)}")
         return False
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
- 
+
     return True
  
 ########################################################################################################################
@@ -244,21 +213,13 @@ def main():
     target_folder = os.path.join(os.getcwd(), 'execution')
     os.makedirs(target_folder, exist_ok=True)
     
-    github_token = os.getenv("GIT_TOKEN")
-    if github_token and "github.com" in github_url:
-        # Inject token into repo URL (safe for HTTPS GitHub URLs)
-        if github_url.startswith("https://"):
-            github_url = github_url.replace("https://", f"https://{github_token}@")
-        else:
-            raise ValueError("Unsupported repo_url format. Must start with https://")
+    github_url = inject_git_token(github_url)
 
-    
-    
-    meta_sheet_file_path = os.path.join(target_folder,f"meta-sheet.xlsx")
+    meta_sheet_file_path = os.path.join(target_folder, f"meta-sheet.xlsx")
     update_lower_env = False
     reverse_promotion = False
     new_branch_created = False
-    clone_repo_master(github_url, "master", target_folder)
+    clone_single_branch_and_checkout(github_url, "master", target_folder)
     prev_branch, present_branch, update_lower_env, new_branch_created = fetch_branches(meta_sheet_file_path, lower_env, update_lower_env, new_branch_created,higher_env, new_version)
     #print(f"Current branch in '{lower_env}': {prev_branch}")
     if new_branch_created:

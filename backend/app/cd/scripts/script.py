@@ -12,26 +12,15 @@ from openpyxl.utils import get_column_letter
 import tempfile
 import re
 
+from git_helpers import (
+    inject_git_token,
+    clone_single_branch_and_checkout,
+    configure_git_user,
+    stage_commit_and_push,
+)
+
 envs = []
 
-def clone_repo(repo_url, branch_name, target_folder):
-    try:
-        if os.path.exists(target_folder):
-            shutil.rmtree(target_folder)
-        os.makedirs(target_folder)  # Create the target folder
-    except Exception as e:
-        print(f"Error creating folder '{target_folder}': {e}")
-        return
- 
-    # Clone the specified branch into the target folder
-    try:
-        subprocess.run(
-            ["git", "clone", "--branch", branch_name, repo_url, target_folder],
-            check=True
-        )
-        print(f"Successfully cloned '{branch_name}' branch into '{target_folder}'.")
-    except subprocess.CalledProcessError as e:
-        print(f"Error cloning the repository: {e}")
  
 def copy_missing_yaml_files(higher_env_x_1, lower_env_x, lower_env, higher_env):
     """
@@ -637,20 +626,10 @@ def main():
     # Environment list (you can modify based on your use case)
     # envs = ['dev', 'sit', 'uat', 'preprod', 'perf', 'mig/dm', 'sec', 'prod']
     
-    github_token = os.getenv("GIT_TOKEN")
-    if github_token and "github.com" in repo_url:
-    # Inject token into repo URL (safe for HTTPS GitHub URLs)
-        if repo_url.startswith("https://"):
-            repo_url = repo_url.replace("https://", f"https://{github_token}@")
-        else:
-            raise ValueError("Unsupported repo_url format. Must start with https://")
- 
-    # To Clone the repo from promotion-x-1 branch
-    clone_repo(repo_url, promote_branch_x_1, target_folder_x_1)
- 
-    # To Clone the repo from promotion-x branch
- 
-    clone_repo(repo_url, promote_branch_x, target_folder_x)
+    repo_url = inject_git_token(repo_url)
+
+    clone_single_branch_and_checkout(repo_url, promote_branch_x_1, target_folder_x_1)
+    clone_single_branch_and_checkout(repo_url, promote_branch_x, target_folder_x)
  
     # if envs[0].startswith('dev'):
     print("dev2 is the lower-env")
@@ -731,31 +710,13 @@ def main():
     print("The result is: ", result)
  
     create_upgrade_services_txt(release_note_path, envs[1], target_folder_x, envs[0])
-    try:
-        subprocess.run(['git', 'add', "."], cwd =target_folder_x, check=True, capture_output=True, text=True)
-        status_result = subprocess.run(['git', 'status'], cwd =target_folder_x, check=True, capture_output=True, text=True)
-        print(status_result.stdout)
-        print(status_result.stderr)
-        # Pull latest changes with rebase to avoid non-fast-forward errors
-        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd =target_folder_x ,check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd =target_folder_x, check=True, timeout=30)
-        subprocess.run(['git', 'commit', '-m',
-                    f'Pushing the release_note into the branch: {sys.argv[2]} '], cwd =target_folder_x, check=True, capture_output=True, text=True)
-        subprocess.run(['git', 'pull', '--rebase', 'origin', sys.argv[2]], cwd=target_folder_x, check=True, capture_output=True, text=True)
-        print("Pulled latest changes successfully.")
- 
-        # Push changes
-        push_result = subprocess.run(['git', 'push', 'origin', sys.argv[2]], cwd=target_folder_x, check=True, capture_output=True, text=True)
-        print("Push successful:")
-        print(push_result.stdout)
- 
-    except subprocess.CalledProcessError as e:
-        print("Git command failed!")
-        print("Return code:", e.returncode)
-        print("Command:", e.cmd)
-        print("Output:", e.output)
-        print("Error:", e.stderr)
-        sys.exit(1)
+
+    configure_git_user(target_folder_x)
+    stage_commit_and_push(
+        target_folder_x,
+        sys.argv[2],
+        f'Pushing the release_note into the branch: {sys.argv[2]}',
+    )
  
     target_folder_x = os.path.dirname(target_folder_x)
     target_folder_x_1 = os.path.dirname(target_folder_x_1)

@@ -5,6 +5,13 @@ import subprocess
 from pathlib import Path
 import tempfile
 import sys
+
+from git_helpers import (
+    inject_git_token,
+    run_git_command,
+    configure_git_user,
+    stage_commit_and_push,
+)
  
 # ------------------ CONFIGURATION ------------------ #
 # Read app_repo_list from file instead of environment variable
@@ -34,13 +41,7 @@ if not app_repo_list:
 
 temp_dir = tempfile.mkdtemp()
 
-github_token = os.getenv("GIT_TOKEN")
-if github_token and "github.com" in promotion_repo:
-    # Inject token into repo URL (safe for HTTPS GitHub URLs)
-    if promotion_repo.startswith("https://"):
-        promotion_repo = promotion_repo.replace("https://", f"https://{github_token}@")
-    else:
-        raise ValueError("Unsupported repo_url format. Must start with https://")
+promotion_repo = inject_git_token(promotion_repo)
  
 source_app_relative_path = os.path.join("helm-charts", "dev-values")
 #source_aql_relative_path = os.path.join("AQL", "scripts")
@@ -53,16 +54,6 @@ destination_app_relative_path = os.path.join("helm-charts", "dev-values", "app-v
 #destination_infra_relative_path = os.path.join("helm-charts", "dev-values", "infra-values")
  
 # ---------------------- FUNCTIONS ----------------------------- #
- 
-def run_git_command(cmd, cwd=None):
-    print(f"Running: {cmd} in {cwd}")
-    result = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True, check=True, timeout=30)
-    if result.returncode != 0:
-        print(f" Git command failed:\nCommand: {cmd}\nReturn Code: {result.returncode}")
-        print(f"Stdout: {result.stdout}")
-        print(f"Stderr: {result.stderr}")
-        raise subprocess.CalledProcessError(result.returncode, cmd, output=result.stdout, stderr=result.stderr)
-    return result.stdout.strip()
  
 def prepare_promotion_repo(promotion_repo_url, workspace, branch):
     promo_repo_path = os.path.join(workspace, "promotion")
@@ -102,13 +93,7 @@ def main():
     # ------------------ APP REPOS ------------------ #
     for repo in app_repo_list:
         try:
-            repo_with_auth = repo
-            if github_token and "github.com" in repo:
-                # Inject token into repo URL (safe for HTTPS GitHub URLs)
-                if repo.startswith("https://"):
-                    repo_with_auth = repo.replace("https://", f"https://{github_token}@")
-                else:
-                    raise ValueError("Unsupported repo_url format. Must start with https://")
+            repo_with_auth = inject_git_token(repo)
             app_temp_dir = tempfile.mkdtemp()
             if os.path.exists(app_temp_dir):
                 shutil.rmtree(app_temp_dir)
@@ -269,12 +254,13 @@ def main():
         # for infra_dir in collected_infra_dirs:
         #     print(f"Infra directory copied from: {infra_dir}")
  
-        # Commit and push changes
-        subprocess.run(['git', 'config', 'user.email', 'kranthimj23@gmail.com'], cwd=promo_repo_path, check=True, timeout=30)
-        subprocess.run(['git', 'config', 'user.name', 'kranthimj23'], cwd=promo_repo_path, check=True, timeout=30)
-        run_git_command("git add .", cwd=promo_repo_path)
-        run_git_command(f'git commit -m "Sync dev-values from all services"', cwd=promo_repo_path)
-        run_git_command(f'git push origin {target_branch}', cwd=promo_repo_path)
+        configure_git_user(promo_repo_path)
+        stage_commit_and_push(
+            promo_repo_path,
+            target_branch,
+            'Sync dev-values from all services',
+            pull_before_push=False,
+        )
  
         print("Promotion repository updated successfully.")
     except Exception as e:

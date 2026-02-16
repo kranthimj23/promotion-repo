@@ -2,24 +2,12 @@ import subprocess
 import sys
 import os
 import tempfile
+
+from git_helpers import (
+    inject_git_token,
+    clone_single_branch_and_checkout,
+)
  
-def git_clone(repository_url, destination_directory, branch):
-    """
-    Clones a Git repository to destination_directory.
-    """
-    try:
-        print(f"Cloning repo {repository_url} into {destination_directory} ...")
-        result = subprocess.run(
-            ['git', 'clone', repository_url, destination_directory, '--branch', branch],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        print(result.stdout)
-        print("Repository cloned successfully.")
-    except subprocess.CalledProcessError as e:
-        print(f"Error cloning repository: {e.stderr}")
-        sys.exit(1)
  
 def deploy_service(text_file, env, env_namespace):
     
@@ -45,13 +33,7 @@ def main():
     repo_url = sys.argv[2]
     branch = sys.argv[3]
  
-    github_token = os.getenv("GIT_TOKEN")
-    if github_token and "github.com" in repo_url:
-    # Inject token into repo URL (safe for HTTPS GitHub URLs)
-        if repo_url.startswith("https://"):
-            repo_url = repo_url.replace("https://", f"https://{github_token}@")
-        else:
-            raise ValueError("Unsupported repo_url format. Must start with https://")
+    repo_url = inject_git_token(repo_url)
  
  
     if not env_name:
@@ -65,7 +47,7 @@ def main():
     # Create a temporary directory which is auto-deleted
     with tempfile.TemporaryDirectory() as tmpdir:
         # Clone the repo in tmpdir
-        git_clone(repo_url, tmpdir, branch)
+        clone_single_branch_and_checkout(repo_url, branch, tmpdir)
  
         # Construct path to the environment-specific text file inside cloned repo
         text_file_path = os.path.join(tmpdir, f"helm-charts/{env_name}-values/app-values/{env_name}.txt")
