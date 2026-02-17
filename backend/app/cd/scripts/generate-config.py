@@ -316,7 +316,11 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
                 raise ValueError(f"Missing or empty key encountered in row {row_num}.")
  
  
-        parsed_value = try_parse_json(he_cur)
+        if he_cur is None:
+            parsed_value = try_parse_json(he_prev)
+        else:
+            parsed_value = try_parse_json(he_cur)
+
 
         if parsed_value is None:
             print(f"Skipping row {row_num} due to None parsed_value")
@@ -351,13 +355,23 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
                         break
             elif change_request == 'delete':
                 if final_key in obj and parsed_value is not None:
-                    print(final_key, obj)
+                    if isinstance(parsed_value, dict):
+                        names_to_delete = {parsed_value[k] for k in parsed_value.keys() if k == 'name'}
+                    else:
+                        names_to_delete = {item['name'] for item in parsed_value}
+                    # names_to_delete = {item['name'] for item in parsed_value}
                     print(f"Deleted entry from '{final_key}' in '{service_name}'.")
                     obj[final_key] = [
-                        entry for entry in obj[final_key]
-                        if not (isinstance(entry, dict) and 'name' in entry and parsed_value is not None and entry['name'] == parsed_value['name'])
+                        entry for entry in obj[final_key] if not (isinstance(entry, dict) and 'name' in entry and entry['name'] in names_to_delete)
                     ]
-
+                    if len(obj[final_key]) == 0:
+                        del obj[final_key]
+            elif change_request == 'pending':
+                if final_key not in obj:
+                    obj[final_key] = parsed_value
+                else:
+                    obj[final_key].insert(-1, parsed_value) # Same logic as 'add'
+                print(f"PENDING→ADDED to '{final_key}' in '{service_name}': {parsed_value}")
         else:
             if change_request == 'modify':
                 obj[final_key] = parsed_value

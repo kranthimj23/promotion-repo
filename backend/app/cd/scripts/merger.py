@@ -30,7 +30,16 @@ from git_helpers import (
         
  
 ########################################################################################################################
- 
+
+def pick_branch(sheet, lower_col, branch_to_pick = None):
+    for row in range(sheet.max_row, 1, -1):
+        val = sheet.cell(row=row, column=lower_col).value
+        if val is None or val == 'X':
+            continue
+        elif str(val).strip() == str(branch_to_pick).strip():
+            return val, row
+    raise ValueError(f"No branch found in column index {lower_col}")
+
 def find_column_index(sheet, env_name):
     for col in range(1, sheet.max_column + 1):
         if sheet.cell(row=1, column=col).value == env_name:
@@ -70,17 +79,28 @@ def update_excel_with_new_branch(file_path, sheet, lower_env, new_branch):
     sheet.parent.save(file_path)
     #print(f"Excel updated: new branch '{new_branch}' written to '{lower_env}' column at row {max_row}.")
  
-def fetch_branches(file_path, lower_env, update_lower_env, new_branch_created, higher_env, new_version=None):
+def fetch_branches(file_path, lower_env, update_lower_env, new_branch_created, higher_env, promotion_branch = None, new_version = None, branch_to_pick = None):
     wb = load_workbook(filename=file_path)
     sheet = wb.active
  
     lower_col = find_column_index(sheet, lower_env)
     higher_col = find_column_index(sheet, higher_env)
+
+    #hotfix short-circuit
+    if branch_to_pick:
+        new_branch_created = True
+        lower_branch, _ = pick_branch(sheet, lower_col, branch_to_pick = branch_to_pick)
+        higher_branch = lower_branch
+        new_branch = create_new_branch(lower_branch, new_version)
+        update_excel_with_new_branch(file_path, sheet, lower_env, new_branch)
+        return lower_branch, new_branch, update_lower_env, new_branch_created
  
-    lower_branch, _ = find_last_updated_branch(sheet, lower_col)
-    ##print("this is a lower_branch from python script", lower_branch)
+    if promotion_branch:
+        lower_branch, _ = pick_branch(sheet, lower_col, branch_to_pick = promotion_branch)
+    else:
+        lower_branch, _ = find_last_updated_branch(sheet, lower_col)
+
     higher_branch, _ = find_last_updated_branch(sheet, higher_col)
-    ##print(higher_branch)
  
     if lower_env == 'dev' and lower_branch!= 'X':
         if lower_branch == higher_branch:
@@ -210,6 +230,7 @@ def main():
     higher_env = sys.argv[2]
     github_url = sys.argv[3]                # Change as needed
     new_version = sys.argv[4]              # Provide new version for dev branch creation
+    branch_to_pick = sys.argv[5] if len(sys.argv) > 5 else None
     target_folder = os.path.join(os.getcwd(), 'execution')
     os.makedirs(target_folder, exist_ok=True)
     
@@ -220,11 +241,20 @@ def main():
     reverse_promotion = False
     new_branch_created = False
     clone_single_branch_and_checkout(github_url, "master", target_folder)
-    prev_branch, present_branch, update_lower_env, new_branch_created = fetch_branches(meta_sheet_file_path, lower_env, update_lower_env, new_branch_created,higher_env, new_version)
-    #print(f"Current branch in '{lower_env}': {prev_branch}")
+
+    if lower_env != 'dev1' and lower_env != 'dev2':
+        promotion_branch = f"release-{new_version}"
+        prev_branch, present_branch, update_lower_env, new_branch_created = fetch_branches(meta_sheet_file_path, lower_env, update_lower_env, new_branch_created, higher_env, promotion_branch = promotion_branch, new_version = new_version)
+    else:
+        prev_branch, present_branch, update_lower_env, new_branch_created = fetch_branches(meta_sheet_file_path, lower_env, update_lower_env, new_branch_created, higher_env, new_version = new_version, branch_to_pick=branch_to_pick)
+
     if new_branch_created:
-        create_github_branch(github_url,prev_branch,present_branch)
-        #print("new branch will be created")
+        create_github_branch(github_url,prev_branch,present_branch, lower_env)
+    # prev_branch, present_branch, update_lower_env, new_branch_created = fetch_branches(meta_sheet_file_path, lower_env, update_lower_env, new_branch_created,higher_env, new_version)
+    # #print(f"Current branch in '{lower_env}': {prev_branch}")
+    # if new_branch_created:
+    #     create_github_branch(github_url,prev_branch,present_branch)
+    #     #print("new branch will be created")
  
     #print(prev_branch, present_branch, update_lower_env, new_branch_created)
     # else:

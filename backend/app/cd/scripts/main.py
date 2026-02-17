@@ -57,7 +57,7 @@ def run_script(script_name, script_path, args, description):
         print(f"❌ Error: Script '{script_path}' not found.")
         return False
 
-    cmd = ["python", script_path] + args
+    cmd = ["python3", script_path] + args
     print(f"Running: {' '.join(cmd)}\n")
 
     try:
@@ -110,6 +110,7 @@ def main():
     promotional_repo = sys.argv[3]
     new_version = sys.argv[4]
     services_list = sys.argv[5]
+    promote_branch_x_1 = sys.argv[6]
 
     # Get the directory containing this script
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -156,13 +157,22 @@ def main():
     # ====================
     # Step 1: Run merger.py
     # ====================
-    merger_args = [
-        lower_env,
-        higher_env,
-        promotional_repo,
-        new_version
-    ]
-
+    if 'hf' in promote_branch_x:
+        promote_branch_x_1 = input("Enter previous stable release branch: ").strip()
+        merger_args = [
+            lower_env,
+            higher_env,
+            promotional_repo,
+            new_version,
+            promote_branch_x_1
+        ]
+    else:
+        merger_args = [
+            lower_env,
+            higher_env,
+            promotional_repo,
+            new_version
+        ]
     if not run_script(
         "promotion_branch_manager.py",
         promotion_branch_manager_script,
