@@ -316,7 +316,7 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
                 raise ValueError(f"Missing or empty key encountered in row {row_num}.")
  
  
-        if he_cur is None:
+        if he_cur is None or he_cur == "":
             parsed_value = try_parse_json(he_prev)
         else:
             parsed_value = try_parse_json(he_cur)
@@ -353,7 +353,9 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
                         entry['value'] = parsed_value['value']
                         print(f"Modified '{final_key}' entry in '{service_name}': {parsed_value}")
                         break
-            elif change_request == 'delete':
+            elif change_request == 'delete' or change_request == 'pending delete':
+                if he_cur is None or he_cur == "":
+                    continue
                 if final_key in obj and parsed_value is not None:
                     if isinstance(parsed_value, dict):
                         names_to_delete = {parsed_value[k] for k in parsed_value.keys() if k == 'name'}
@@ -366,7 +368,7 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
                     ]
                     if len(obj[final_key]) == 0:
                         del obj[final_key]
-            elif change_request == 'pending':
+            elif change_request == 'pending add':
                 if final_key not in obj:
                     obj[final_key] = parsed_value
                 else:

@@ -384,21 +384,80 @@ def compare_json_files(le_old_data, le_new_data, he_old_data):
 def compare(le_old, le_new, root, changes, he_old, path=''):
     # Handle dictionary structures
     if isinstance(le_old, dict) and isinstance(le_new, dict):
-        for k in le_old.keys():
+
+        he_old = he_old or {}
+
+        all_keys = set(he_old.keys()) | set(le_old.keys()) | set(le_new.keys())
+
+        for k in all_keys:
             new_key_path = f"{path}//{k}" if path else k
-            if k in le_new:
-                compare(le_old[k], le_new[k], root, changes, he_old[k], new_key_path)
-            else:
-                modified_json = dump_and_replace(le_old[k], lower_env=envs[0], higher_env=envs[1])
-                changes.append((root, 'delete', new_key_path, json.dumps(le_old[k], indent=4), json.dumps(le_old[k], indent=4), modified_json, json.dumps(he_old[k], indent=4), 'Deleted'))
- 
- 
-        for k in le_new.keys():
-            new_key_path = f"{path}//{k}" if path else k
-            if k not in le_old:
-                modified_json = dump_and_replace(le_new[k], lower_env=envs[0], higher_env=envs[1])
-                changes.append((root, 'add', new_key_path, json.dumps(le_new[k], indent=4), '',modified_json,'', 'Added'))
- 
+
+            he_val = he_old.get(k)
+            le_old_val = le_old.get(k)
+            le_new_val = le_new.get(k)
+
+            # 🔴 Deleted (exists in old lower but removed in new)
+            if k in le_old and k not in le_new:
+                modified_json = dump_and_replace(
+                    le_old_val,
+                    lower_env=envs[0],
+                    higher_env=envs[1]
+                )
+                changes.append((
+                    root, 'delete', new_key_path,
+                    '',
+                    json.dumps(le_old_val, indent=4),
+                    '',
+                    json.dumps(he_val, indent=4) if he_val else '',
+                    'Deleted'
+                ))
+            # 🔴 Deletion Pending (exists in higher, removed in new)
+            elif k in he_old and k not in le_new:
+                changes.append((
+                    root, 'pending delete', new_key_path,
+                    '', '', '',
+                    json.dumps(he_val, indent=4),
+                    'Deletion Pending'
+                ))
+
+            # 🟢 Added / Promotion Pending
+            elif k in le_new and k not in he_old:
+                modified_json = dump_and_replace(
+                    le_new_val,
+                    lower_env=envs[0],
+                    higher_env=envs[1]
+                )
+
+                if k not in le_old:
+                    changes.append((
+                        root, 'add', new_key_path,
+                        json.dumps(le_new_val, indent=4),
+                        '',
+                        modified_json,
+                        '',
+                        'Added'
+                    ))
+                else:
+                    changes.append((
+                        root, 'pending add', new_key_path,
+                        json.dumps(le_new_val, indent=4),
+                        '',
+                        modified_json,
+                        '',
+                        'Promotion Pending'
+                    ))
+
+            # 🔁 Recursive compare
+            elif k in le_old and k in le_new:
+                compare(
+                    le_old_val,
+                    le_new_val,
+                    root,
+                    changes,
+                    he_val,
+                    new_key_path
+                )
+
     # Handle lists
     elif isinstance(le_old, list) and isinstance(le_new, list):
         if all(isinstance(i, dict) for i in le_old) and all(isinstance(i, dict) for i in le_new):
@@ -414,7 +473,7 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
                             changes.append((root, 'modify', f"{path}", "["+json.dumps(le_new[i], indent=4)+"]", "["+json.dumps(le_old_item, indent=4)+"]",  "["+modified_json+"]","["+json.dumps(he_old[i], indent=4)+"]",'Modified'))
                     else:
                         modified_json = dump_and_replace(le_old_item, lower_env=envs[0], higher_env=envs[1])
-                        changes.append((root, 'delete', f"{path}", json.dumps(le_old_item, indent=4),json.dumps(le_old_item, indent=4), modified_json,json.dumps(he_old[i], indent=4),'Deleted'))
+                        changes.append((root, 'delete', f"{path}", '',json.dumps(le_old_item, indent=4), '',json.dumps(he_old[i], indent=4),'Deleted'))
  
  
                 # Add any new elements from the new list
@@ -429,35 +488,87 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
             changes.append((root, 'modify', path, json.dumps(le_new, indent=4), json.dumps(le_old, indent=4) ,modified_json,json.dumps(he_old, indent=4) ,'Modified'))
  
 def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, path=''):
-    # Compare lists of dictionaries based on the "name" key
-    le_old_dict = {item["name"]: item for item in le_old_list if "name" in item}
-    le_new_dict = {item["name"]: item for item in le_new_list if "name" in item}
-    he_old_dict = {item["name"]: item for item in he_old_list if "name" in item}
- 
- 
-    # Compare le_old dictionaries with new
-    for key, le_old_item in le_old_dict.items():
-        if key in le_new_dict:
-            le_new_item = le_new_dict[key]
-            # If there are changes in the item
-            he_old_item = he_old_dict.get(key)
-            if le_old_item != le_new_item:
-                modified_json = dump_and_replace(le_new_item, lower_env=envs[0], higher_env=envs[1])
-                changes.append((root, 'modify', path, json.dumps(le_new_item, indent=4), json.dumps(le_old_item, indent=4), modified_json, json.dumps(he_old_item, indent=4) if he_old_item else '', 'Modified'))
-                #changes.append((root, 'modify', path, json.dumps(le_new_item, indent=4), json.dumps(le_old_item, indent=4),'',json.dumps(he_old_item, indent=4), 'Modified'))
- 
-        else:
-            modified_json = dump_and_replace(le_old_item, lower_env=envs[0], higher_env=envs[1])
-            changes.append((root, 'delete', path, json.dumps(le_old_item, indent=4), json.dumps(le_old_item, indent=4), '', json.dumps(he_old_dict.get(key), indent=4) if he_old_dict.get(key) else '', 'Deleted'))
- 
-            #changes.append((root, 'delete', path, '' , json.dumps(le_old_item, indent=4),'',json.dumps(he_old_item, indent=4),'Deleted'))
- 
- 
-    # Check for additions
-    for key, new_item in le_new_dict.items():
-        if key not in le_old_dict:
-            modified_json = dump_and_replace(new_item, lower_env=envs[0], higher_env=envs[1])
-            changes.append((root, 'add', path, json.dumps(new_item, indent=4),'',modified_json,'','Added'))
+
+    le_old_dict = {i["name"]: i for i in le_old_list if "name" in i}
+    le_new_dict = {i["name"]: i for i in le_new_list if "name" in i}
+    he_old_dict = {i["name"]: i for i in he_old_list if "name" in i}
+
+    all_keys = set(le_old_dict) | set(le_new_dict) | set(he_old_dict)
+
+    for key in all_keys:
+        le_old_item = le_old_dict.get(key)
+        le_new_item = le_new_dict.get(key)
+        he_old_item = he_old_dict.get(key)
+
+        key_path = f"{path}//{key}"
+
+        # 🔴 Deleted
+        if key in le_old_dict and key not in le_new_dict:
+            modified_json = dump_and_replace(
+                le_old_item,
+                lower_env=envs[0],
+                higher_env=envs[1]
+            )
+            changes.append((
+                root, 'delete', key_path,
+                '',
+                json.dumps(le_old_item, indent=4),
+                '',
+                json.dumps(he_old_item, indent=4) if he_old_item else '',
+                'Deleted'
+            ))
+        # 🔴 Deletion Pending
+        elif key in he_old_dict and key not in le_new_dict:
+            changes.append((
+                root, 'pending delete', key_path,
+                '', '', '',
+                json.dumps(he_old_item, indent=4),
+                'Deletion Pending'
+            ))
+
+        # 🟢 Added / Promotion Pending
+        elif key in le_new_dict and key not in he_old_dict:
+            modified_json = dump_and_replace(
+                le_new_item,
+                lower_env=envs[0],
+                higher_env=envs[1]
+            )
+
+            if key not in le_old_dict:
+                changes.append((
+                    root, 'add', key_path,
+                    json.dumps(le_new_item, indent=4),
+                    '',
+                    modified_json,
+                    '',
+                    'Added'
+                ))
+            else:
+                changes.append((
+                    root, 'pending add', key_path,
+                    json.dumps(le_new_item, indent=4),
+                    '',
+                    modified_json,
+                    '',
+                    'Promotion Pending'
+                ))
+
+        # 🔁 Modified
+        elif le_old_item != le_new_item:
+            modified_json = dump_and_replace(
+                le_new_item,
+                lower_env=envs[0],
+                higher_env=envs[1]
+            )
+            changes.append((
+                root, 'modify', key_path,
+                json.dumps(le_new_item, indent=4),
+                json.dumps(le_old_item, indent=4),
+                modified_json,
+                json.dumps(he_old_item, indent=4) if he_old_item else '',
+                'Modified'
+            ))
+
  
  
 def update_image_tag(image_str, env_keyword):
