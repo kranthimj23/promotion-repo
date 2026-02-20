@@ -328,41 +328,16 @@ def yaml_to_json(folder_path):
  
     return json_data
  
- 
+def get_parent_path(path: str) -> str:
+    if not path:
+        return path
+    return path.rsplit("//", 1)[0] if "//" in path else path
  
 def dump_and_replace(json_obj, lower_env, higher_env):
-    """
-    Safely replace environment names in JSON data
-    without touching domain names or unrelated words.
-    Only replaces in:
-      - Docker image tags (e.g., :14-dev → :14-sit)
-      - YAML 'tag:' fields
-    """
     json_str = json.dumps(json_obj, indent=4)
-
-    # Pattern 1: Replace in docker tags like :14-dev
-    json_str = re.sub(
-        rf'(:[0-9A-Za-z_.-]+-){lower_env}(\b)',
-        rf'\1{higher_env}',
-        json_str
-    )
-
-    # Pattern 2: Replace in YAML/JSON tag fields: "tag": "14-dev"
-    json_str = re.sub(
-        rf'("tag"\s*:\s*"[0-9A-Za-z_.-]+-){lower_env}(\b)',
-        rf'\1{higher_env}',
-        json_str
-    )
-
-    # Return as string (so caller can write to file) or back to dict if needed
-    try:
-        return json.loads(json_str)
-    except json.JSONDecodeError:
-        # If not valid JSON after replacement (might be YAML later), return string
-        return json_str
+    return json_str
  
- 
- 
+
 def compare_json_files(le_old_data, le_new_data, he_old_data):
     changes = []
  
@@ -403,8 +378,9 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
                     lower_env=envs[0],
                     higher_env=envs[1]
                 )
+
                 changes.append((
-                    root, 'delete', new_key_path,
+                    root, 'delete', get_parent_path(new_key_path),
                     '',
                     json.dumps(le_old_val, indent=4),
                     '',
@@ -414,7 +390,7 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
             # 🔴 Deletion Pending (exists in higher, removed in new)
             elif k in he_old and k not in le_new:
                 changes.append((
-                    root, 'pending delete', new_key_path,
+                    root, 'pending delete', get_parent_path(new_key_path),
                     '', '', '',
                     json.dumps(he_val, indent=4),
                     'Deletion Pending'
@@ -430,7 +406,7 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
 
                 if k not in le_old:
                     changes.append((
-                        root, 'add', new_key_path,
+                        root, 'add', get_parent_path(new_key_path),
                         json.dumps(le_new_val, indent=4),
                         '',
                         modified_json,
@@ -439,7 +415,7 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
                     ))
                 else:
                     changes.append((
-                        root, 'pending add', new_key_path,
+                        root, 'pending add', get_parent_path(new_key_path),
                         json.dumps(le_new_val, indent=4),
                         '',
                         modified_json,
@@ -484,6 +460,7 @@ def compare(le_old, le_new, root, changes, he_old, path=''):
     # Compare scalar values
     else:
         if le_old != le_new:
+            path = get_parent_path(path)
             modified_json = dump_and_replace(le_new, lower_env=envs[0], higher_env=envs[1])
             changes.append((root, 'modify', path, json.dumps(le_new, indent=4), json.dumps(le_old, indent=4) ,modified_json,json.dumps(he_old, indent=4) ,'Modified'))
  
@@ -510,7 +487,7 @@ def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, 
                 higher_env=envs[1]
             )
             changes.append((
-                root, 'delete', key_path,
+                root, 'delete', get_parent_path(key_path),
                 '',
                 json.dumps(le_old_item, indent=4),
                 '',
@@ -520,7 +497,7 @@ def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, 
         # 🔴 Deletion Pending
         elif key in he_old_dict and key not in le_new_dict:
             changes.append((
-                root, 'pending delete', key_path,
+                root, 'pending delete', get_parent_path(key_path),
                 '', '', '',
                 json.dumps(he_old_item, indent=4),
                 'Deletion Pending'
@@ -536,7 +513,7 @@ def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, 
 
             if key not in le_old_dict:
                 changes.append((
-                    root, 'add', key_path,
+                    root, 'add', get_parent_path(key_path),
                     json.dumps(le_new_item, indent=4),
                     '',
                     modified_json,
@@ -545,7 +522,7 @@ def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, 
                 ))
             else:
                 changes.append((
-                    root, 'pending add', key_path,
+                    root, 'pending add', get_parent_path(key_path),
                     json.dumps(le_new_item, indent=4),
                     '',
                     modified_json,
@@ -561,7 +538,7 @@ def compare_list_of_dicts(le_old_list, le_new_list, root, changes, he_old_list, 
                 higher_env=envs[1]
             )
             changes.append((
-                root, 'modify', key_path,
+                root, 'modify', get_parent_path(key_path),
                 json.dumps(le_new_item, indent=4),
                 json.dumps(le_old_item, indent=4),
                 modified_json,
@@ -703,67 +680,7 @@ def write_changes_to_excel(changes, release_note_path, envs, env_list):
 
     # Save the updated workbook
     wb.save(excel_file_path)    
- 
- 
-# def write_changes_to_excel(changes, release_note_path, envs,env_list):
-#     if not changes:
-#         print("No differences found; skipping the creation of release note.")
-#         return
- 
-#     # Constant part of the filename
-#     base_filename = "release-note"
-#     # Get the current date and time
-#     now = datetime.datetime.now()
-#     # Format the date and time as a string
-#     date_time_str = now.strftime("%d-%b-%Y-%H-%M-%S")
-#     # Create the complete filename
-#     excel_file = f"{base_filename}-{date_time_str}.xlsx"
-#     excel_file_path = os.path.join(release_note_path, excel_file)
- 
-#     # Check if the file exists
-#     if os.path.exists(excel_file_path):
-#         wb = load_workbook(excel_file_path)
-#     else:
-#         wb = Workbook()
- 
-#     ws = wb.active
-#     ws.title = envs[1]  # Name the first sheet
- 
-#     ws.append([
-#         'Service name', 'Change Request', 'Key', f'{envs[0]}-current value', f'{envs[0]}-previous value', f'{envs[1]}-current value', f'{envs[1]}-previous value','Comment'])
- 
-#     # Write the changes for the environment
-#     for change in changes:
-#         print(change)
-#         service_name, change_type, key, le_cur, le_prev, he_cur, he_prev, comment = change
- 
-#         # 🔄 If key is image//repository, update he_cur with transformed tag
-#         if key == 'image//image_name':
-#             he_cur = update_image_tag(he_cur, envs[1])  # replace after 2nd hyphen
- 
-#         # 🧠 Scenario 2: Root object with embedded image.repository
-#         elif isinstance(comment, str) and comment.strip().lower() == 'root object added':
-#             he_cur = update_image_repo_in_json_string(he_cur, envs[1])
- 
-#         # Check if value exceeds 32,767 characters
-#         if len(le_cur) > 32767:
-#             # Save large data to a text file
-#             txt_file_name = f"{service_name}.txt"
-#             txt_file_path = os.path.join(release_note_path, txt_file_name)
-#             with open(txt_file_path, 'w') as txt_file:
-#                 txt_file.write(le_cur)
- 
-#             # Format path for hyperlink (absolute path)
-#             txt_file_path_linked = f'file:///{os.path.abspath(txt_file_path)}'.replace(' ', '%20')
- 
-#             # Create a hyperlink in Excel pointing to this text file
-#             ws.append([service_name,change_type,key,f'=HYPERLINK("{txt_file_path_linked}")','','','',comment])
-#         else:
-#             # Append new changes directly to the relevant sheet
-#             ws.append([service_name, change_type, key, le_cur, le_prev, he_cur, he_prev, comment])
- 
-#     # Save the updated workbook
-#     wb.save(excel_file_path)
+
  
 def get_input(prompt):
     attempts = 3

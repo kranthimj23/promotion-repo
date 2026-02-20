@@ -354,14 +354,13 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
                         print(f"Modified '{final_key}' entry in '{service_name}': {parsed_value}")
                         break
             elif change_request == 'delete' or change_request == 'pending delete':
-                if he_cur is None or he_cur == "":
+                if (he_cur is not None and len(he_cur) != 0):
                     continue
-                if final_key in obj and parsed_value is not None:
+                elif final_key in obj and parsed_value is not None:
                     if isinstance(parsed_value, dict):
                         names_to_delete = {parsed_value[k] for k in parsed_value.keys() if k == 'name'}
                     else:
                         names_to_delete = {item['name'] for item in parsed_value}
-                    # names_to_delete = {item['name'] for item in parsed_value}
                     print(f"Deleted entry from '{final_key}' in '{service_name}'.")
                     obj[final_key] = [
                         entry for entry in obj[final_key] if not (isinstance(entry, dict) and 'name' in entry and entry['name'] in names_to_delete)
@@ -387,7 +386,7 @@ def apply_changes_to_json(json_data, excel_file_path, sheet_name, lower_env, hig
 
         # Check for missing or empty value
         if he_cur is None or (isinstance(he_cur, str) and he_cur.strip() == ""):
-            if change_request == "delete":
+            if change_request == "delete" or change_request == 'pending delete':
                 continue
             else:
                 raise ValueError(f"Missing or empty value encountered in row {row_num}.")
@@ -723,18 +722,15 @@ def fetch_branches(repo_url, lower_env, higher_env):
 def main():
  
     repos_info = {
-        'promotion-repo': sys.argv[1]
+        'promotion-repo': sys.argv[5]
     }
  
-    lower_env = sys.argv[4]
-    higher_env = sys.argv[5]
- 
-    # promote_branch_x, promote_branch_x_1 = fetch_branches(sys.argv[1],lower_env, higher_env)
- 
- 
+    lower_env = sys.argv[3]
+    higher_env = sys.argv[4]
+
     for repo_name, repo_url in repos_info.items():
-        promote_branch_x_1 = sys.argv[2]
-        promote_branch_x = sys.argv[3]
+        promote_branch_x_1 = sys.argv[1]
+        promote_branch_x = sys.argv[2]
  
         target_folder_x_1 = os.path.join(os.getcwd(), "generate-config", "promotion-x-1", f"{repo_name}")
         target_folder_x = os.path.join(os.getcwd(), "generate-config", "promotion-x", f"{repo_name}")
@@ -742,10 +738,7 @@ def main():
     repo_url = inject_git_token(repo_url)
     clone_single_branch_and_checkout(repo_url, promote_branch_x_1, target_folder_x_1)
     clone_single_branch_and_checkout(repo_url, promote_branch_x, target_folder_x)
- 
-    lower_env = sys.argv[4]
-    higher_env = sys.argv[5]
- 
+
     release_note_path = os.path.join(target_folder_x, "helm-charts", f"{higher_env}-values", "app-values", f"release_note")
     print("Path is :: ", os.path.join(target_folder_x, "helm-charts", f"{higher_env}-values", f"release_note"))
  
@@ -787,11 +780,11 @@ def main():
     configure_git_user(target_folder_x)
     stage_commit_and_push(
         target_folder_x,
-        sys.argv[3],
-        f'Config files generated: {sys.argv[3]}',
+        sys.argv[2],
+        f'Config files generated: {sys.argv[2]}',
     )
 
-    update_meta_sheet(lower_env, sheet, promote_branch_x, sys.argv[1])
+    update_meta_sheet(lower_env, sheet, promote_branch_x, sys.argv[5])
  
  
     target_folder_x = os.path.dirname(target_folder_x)
