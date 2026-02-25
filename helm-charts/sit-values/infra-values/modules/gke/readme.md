@@ -1,1 +1,1 @@
-The files of /tmp/tmphznlkt9j/new_branch/helm-charts/sit-values are stored here
+The files of D:\Garuda\BE_unified_state\backend\app\cd\scripts\temp\new_branch\helm-charts\sit-values are stored here
