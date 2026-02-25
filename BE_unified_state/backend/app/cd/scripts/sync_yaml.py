@@ -131,6 +131,8 @@ def main():
     except Exception as e:
         print(f"Failed to update promotion repo: {e}")
     finally:
+        import time
+        time.sleep(2) # Give Windows time to release file handles
         shutil.rmtree(temp_dir, onerror=on_rm_error)
 
 if __name__ == "__main__":

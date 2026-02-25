@@ -16,29 +16,29 @@ import { BranchTrackerController } from './controllers/branch-tracker.controller
 import { MigrationController } from './controllers/migration.controller';
 
 @Module({
-    controllers: [
-        ProjectController,
-        PromotionRepoController,
-        SourceRepoController,
-        EnvironmentController,
-        CredentialController,
-        BranchTrackerController,
-        MigrationController,
-    ],
-    providers: [
-        ProjectService,
-        CredentialService,
-        RepoVerificationService,
-        BranchTrackerService,
-        EnvironmentService,
-        ConfigExportService,
-        MigrationService,
-    ],
-    exports: [
-        ProjectService,
-        CredentialService,
-        ConfigExportService,
-        BranchTrackerService,
-    ],
+  controllers: [
+    ProjectController,
+    PromotionRepoController,
+    SourceRepoController,
+    EnvironmentController,
+    CredentialController,
+    BranchTrackerController,
+    MigrationController,
+  ],
+  providers: [
+    ProjectService,
+    CredentialService,
+    RepoVerificationService,
+    BranchTrackerService,
+    EnvironmentService,
+    ConfigExportService,
+    MigrationService,
+  ],
+  exports: [
+    ProjectService,
+    CredentialService,
+    ConfigExportService,
+    BranchTrackerService,
+  ],
 })
-export class ProjectModule { }
+export class ProjectModule {}

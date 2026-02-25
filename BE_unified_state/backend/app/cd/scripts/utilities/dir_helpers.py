@@ -2,18 +2,38 @@ import os
 import stat
 import shutil
 
+import time
+
 def make_dir(parent_dir = None, dir_name = 'temp'):
     temp_folder = os.path.join(os.getcwd(), parent_dir if parent_dir else "", dir_name)
     os.makedirs(temp_folder, exist_ok=True)
     return temp_folder
 
 def on_rm_error(func, path, exc_info):
-    os.chmod(path, stat.S_IWRITE)
-    func(path)
+    """
+    Error handler for shutil.rmtree.
+    On Windows, this is often needed to handle read-only files or files in use.
+    """
+    # 1. Handle read-only files
+    if not os.access(path, os.W_OK):
+        os.chmod(path, stat.S_IWRITE)
+    
+    # 2. Try to call the function again (func is usually os.remove or os.rmdir)
+    # We add a small retry loop for "File in use" errors on Windows
+    retries = 3
+    for i in range(retries):
+        try:
+            func(path)
+            return
+        except PermissionError:
+            if i < retries - 1:
+                time.sleep(1) # Wait 1 second before retrying
+            else:
+                raise
 
 def isDirClean(directory):
     if os.path.exists(directory):
-        shutil.rmtree(directory)
+        shutil.rmtree(directory, onerror=on_rm_error)
         return True
     
 def clean_non_dev_folders(temp_dir):

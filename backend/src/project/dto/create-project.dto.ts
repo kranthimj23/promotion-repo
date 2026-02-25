@@ -1,9 +1,16 @@
-import { IsString, IsEmail, IsOptional, Matches, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateProjectDto {
   @IsString()
   @Matches(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, {
-    message: 'name must be lowercase alphanumeric with hyphens, cannot start/end with hyphen',
+    message:
+      'name must be lowercase alphanumeric with hyphens, cannot start/end with hyphen',
   })
   @MaxLength(63, { message: 'name must not exceed 63 characters' })
   name: string;

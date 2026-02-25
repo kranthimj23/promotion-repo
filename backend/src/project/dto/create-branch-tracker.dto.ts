@@ -1,9 +1,9 @@
 import { IsString } from 'class-validator';
 
 export class CreateBranchTrackerDto {
-    @IsString()
-    branchName: string;
+  @IsString()
+  branchName: string;
 
-    @IsString()
-    version: string;
+  @IsString()
+  version: string;
 }

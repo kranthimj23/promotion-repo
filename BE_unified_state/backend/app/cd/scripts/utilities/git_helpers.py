@@ -5,7 +5,7 @@ from utilities.dir_helpers import isDirClean
 
 def is_base_branch_exists(url, branch):
     ls_remote = subprocess.run(['git', 'ls-remote', '--heads', url, branch], capture_output=True, text=True, check=True)
-    if ls_remote:
+    if ls_remote.stdout.strip():
         return True
     else:
         return False
