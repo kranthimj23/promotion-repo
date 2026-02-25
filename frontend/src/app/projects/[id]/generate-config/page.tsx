@@ -1,25 +1,49 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 
-export default function CreateReleaseNotePage() {
+export default function GenerateConfigPage() {
+    const params = useParams();
+    const projectId = params.id as string;
+    const [project, setProject] = useState<any>(null);
     const [formData, setFormData] = useState({
-        lowerEnv: '',
-        higherEnv: '',
-        sourceBranch: '',
-        destinationBranch: '',
+        environment: '',
+        releaseBranch: '',
     });
     const [loading, setLoading] = useState(false);
+    const [fetchingProject, setFetchingProject] = useState(true);
     const [result, setResult] = useState<any>(null);
+
+    useEffect(() => {
+        async function fetchProject() {
+            try {
+                const res = await fetch(`http://localhost:3001/api/projects/${projectId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setProject(data);
+                    // Pre-fill environment if available
+                    if (data.environments && data.environments.length > 0) {
+                        setFormData(prev => ({ ...prev, environment: data.environments[0].name }));
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch project context:', err);
+            } finally {
+                setFetchingProject(false);
+            }
+        }
+        fetchProject();
+    }, [projectId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:3001/api/cd/create-release-note', {
+            const res = await fetch('http://localhost:3001/api/cd/generate-config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({ ...formData, projectId }),
             });
             const data = await res.json();
             setResult(data);
@@ -30,59 +54,42 @@ export default function CreateReleaseNotePage() {
         }
     };
 
+    if (fetchingProject) return <div>Loading project context...</div>;
+
     return (
         <div style={{ maxWidth: '800px' }}>
-            <h1 style={{ fontSize: '1.875rem', fontWeight: 700, marginBottom: '2rem' }}>Create Release Note</h1>
+            <div style={{ marginBottom: '2rem' }}>
+                <h1 style={{ fontSize: '1.875rem', fontWeight: 700, marginBottom: '0.5rem' }}>Generate Config</h1>
+                <p style={{ color: 'var(--muted-foreground)' }}>Project: <strong>{project?.displayName || projectId}</strong></p>
+            </div>
 
             <div className="card">
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.5rem' }}>
                     <div style={{ display: 'grid', gap: '0.5rem' }}>
-                        <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>Lower Env</label>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>Environment</label>
                         <input
                             type="text"
                             className="input"
-                            placeholder="e.g. dev"
-                            value={formData.lowerEnv}
-                            onChange={(e) => setFormData({ ...formData, lowerEnv: e.target.value })}
+                            placeholder="e.g. prod"
+                            value={formData.environment}
+                            onChange={(e) => setFormData({ ...formData, environment: e.target.value })}
                             style={{ padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--background)' }}
                         />
                     </div>
                     <div style={{ display: 'grid', gap: '0.5rem' }}>
-                        <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>Higher Env</label>
-                        <input
-                            type="text"
-                            className="input"
-                            placeholder="e.g. stage"
-                            value={formData.higherEnv}
-                            onChange={(e) => setFormData({ ...formData, higherEnv: e.target.value })}
-                            style={{ padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--background)' }}
-                        />
-                    </div>
-                    <div style={{ display: 'grid', gap: '0.5rem' }}>
-                        <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>Source Branch</label>
-                        <input
-                            type="text"
-                            className="input"
-                            placeholder="e.g. main"
-                            value={formData.sourceBranch}
-                            onChange={(e) => setFormData({ ...formData, sourceBranch: e.target.value })}
-                            style={{ padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--background)' }}
-                        />
-                    </div>
-                    <div style={{ display: 'grid', gap: '0.5rem' }}>
-                        <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>Destination Branch</label>
+                        <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>Release Branch</label>
                         <input
                             type="text"
                             className="input"
                             placeholder="e.g. release/v1.0"
-                            value={formData.destinationBranch}
-                            onChange={(e) => setFormData({ ...formData, destinationBranch: e.target.value })}
+                            value={formData.releaseBranch}
+                            onChange={(e) => setFormData({ ...formData, releaseBranch: e.target.value })}
                             style={{ padding: '0.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--background)' }}
                         />
                     </div>
 
                     <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: 'fit-content' }}>
-                        {loading ? 'Creating...' : 'Create Release Note'}
+                        {loading ? 'Generating...' : 'Generate Config'}
                     </button>
                 </form>
             </div>

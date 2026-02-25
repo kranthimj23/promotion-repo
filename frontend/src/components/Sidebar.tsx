@@ -25,26 +25,6 @@ export default function Sidebar() {
                     </ul>
                 </div>
 
-                <div style={{ marginBottom: '1.5rem' }}>
-                    <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted-foreground)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Release Management</p>
-                    <ul style={{ listStyle: 'none', display: 'grid', gap: '0.25rem' }}>
-                        <li>
-                            <a href="/release-notes" className={`btn ${pathname === '/release-notes' ? 'btn-primary' : 'btn-outline'}`} style={{ width: '100%', justifyContent: 'flex-start', border: pathname === '/release-notes' ? 'none' : 'none' }}>
-                                Create Release Note
-                            </a>
-                        </li>
-                        <li>
-                            <a href="/generate-config" className={`btn ${pathname === '/generate-config' ? 'btn-primary' : 'btn-outline'}`} style={{ width: '100%', justifyContent: 'flex-start', border: pathname === '/generate-config' ? 'none' : 'none' }}>
-                                Generate Config
-                            </a>
-                        </li>
-                        <li>
-                            <a href="/deploy" className={`btn ${pathname === '/deploy' ? 'btn-primary' : 'btn-outline'}`} style={{ width: '100%', justifyContent: 'flex-start', border: pathname === '/deploy' ? 'none' : 'none' }}>
-                                Deploy
-                            </a>
-                        </li>
-                    </ul>
-                </div>
 
                 {isProjectContext && (
                     <div>
@@ -54,6 +34,27 @@ export default function Sidebar() {
                                 <a href={`/projects/${projectId}`} className={`btn ${pathname === `/projects/${projectId}` ? 'btn-primary' : 'btn-outline'}`} style={{ width: '100%', justifyContent: 'flex-start', border: 'none' }}>
                                     Overview
                                 </a>
+                            </li>
+                            <li style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>
+                                <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--muted-foreground)', paddingLeft: '0.75rem', textTransform: 'uppercase' }}>Operations</p>
+                            </li>
+                            <li>
+                                <a href={`/projects/${projectId}/release-notes`} className={`btn ${pathname === `/projects/${projectId}/release-notes` ? 'btn-primary' : 'btn-outline'}`} style={{ width: '100%', justifyContent: 'flex-start', border: 'none' }}>
+                                    Create Release Note
+                                </a>
+                            </li>
+                            <li>
+                                <a href={`/projects/${projectId}/generate-config`} className={`btn ${pathname === `/projects/${projectId}/generate-config` ? 'btn-primary' : 'btn-outline'}`} style={{ width: '100%', justifyContent: 'flex-start', border: 'none' }}>
+                                    Generate Config
+                                </a>
+                            </li>
+                            <li>
+                                <a href={`/projects/${projectId}/deploy`} className={`btn ${pathname === `/projects/${projectId}/deploy` ? 'btn-primary' : 'btn-outline'}`} style={{ width: '100%', justifyContent: 'flex-start', border: 'none' }}>
+                                    Deploy
+                                </a>
+                            </li>
+                            <li style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>
+                                <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--muted-foreground)', paddingLeft: '0.75rem', textTransform: 'uppercase' }}>Management</p>
                             </li>
                             <li>
                                 <a href={`/projects/${projectId}/source-repos`} className={`btn ${pathname.includes('/source-repos') ? 'btn-primary' : 'btn-outline'}`} style={{ width: '100%', justifyContent: 'flex-start', border: 'none' }}>

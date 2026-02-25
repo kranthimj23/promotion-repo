@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
+import { PrismaService } from '../prisma/prisma.service';
 
 const execPromise = promisify(exec);
 
@@ -11,6 +12,8 @@ export class CDScriptService {
     private readonly pythonPath = 'D:\\GarudaBE\\BE_unified_state\\backend\\.venv\\Scripts\\python.exe';
     private readonly garudaBePath = 'D:\\GarudaBE\\BE_unified_state\\backend\\app\\cd\\scripts';
 
+    constructor(private readonly prisma: PrismaService) { }
+
     private getEnv() {
         const env = { ...process.env };
         env.PYTHONPATH = this.garudaBePath + (env.PYTHONPATH ? path.delimiter + env.PYTHONPATH : '');
@@ -18,15 +21,22 @@ export class CDScriptService {
     }
 
     async executeCreateReleaseNote(params: {
+        projectId: string;
         lowerEnv: string;
         higherEnv: string;
         sourceBranch: string;
         destinationBranch: string;
     }) {
+        const promoRepo = await this.prisma.promotionRepo.findUnique({
+            where: { projectId: params.projectId }
+        });
+
+        if (!promoRepo) {
+            throw new NotFoundException(`Promotion repository for project "${params.projectId}" not found`);
+        }
+
         const scriptPath = path.join(this.garudaBePath, 'create_release_note.py');
-        // create_release_note.py expects: branch_x-1 branch_x envs[0] envs[1] repo_url
-        // Based on the code, it uses sys.argv[1]..sys.argv[5]
-        const command = `${this.pythonPath} "${scriptPath}" "${params.sourceBranch}" "${params.destinationBranch}" "${params.lowerEnv}" "${params.higherEnv}" "placeholder_repo_url"`;
+        const command = `${this.pythonPath} "${scriptPath}" "${params.sourceBranch}" "${params.destinationBranch}" "${params.lowerEnv}" "${params.higherEnv}" "${promoRepo.repoUrl}"`;
 
         this.logger.log(`Executing: ${command}`);
         try {
@@ -40,11 +50,12 @@ export class CDScriptService {
     }
 
     async executeGenerateConfig(params: {
+        projectId: string;
         environment: string;
         releaseBranch: string;
     }) {
         const scriptPath = path.join(this.garudaBePath, 'generate-config.py');
-        const command = `${this.pythonPath} "${scriptPath}" --env "${params.environment}" --branch "${params.releaseBranch}"`;
+        const command = `${this.pythonPath} "${scriptPath}" --env "${params.environment}" --branch "${params.releaseBranch}" --project "${params.projectId}"`;
 
         this.logger.log(`Executing: ${command}`);
         try {
@@ -58,11 +69,20 @@ export class CDScriptService {
     }
 
     async executeDeploy(params: {
-        type: string; // e.g., 'application'
+        projectId: string;
+        type: string;
     }) {
+        const promoRepo = await this.prisma.promotionRepo.findUnique({
+            where: { projectId: params.projectId }
+        });
+
+        if (!promoRepo) {
+            throw new NotFoundException(`Promotion repository for project "${params.projectId}" not found`);
+        }
+
         const scriptPath = path.join(this.garudaBePath, 'deploy.py');
         // deploy.py expects: <env> <repo_url> <branch>
-        const command = `${this.pythonPath} "${scriptPath}" "placeholder_env" "placeholder_repo" "placeholder_branch" --type "${params.type}"`;
+        const command = `${this.pythonPath} "${scriptPath}" "dev1" "${promoRepo.repoUrl}" "master" --type "${params.type}" --project "${params.projectId}"`;
 
         this.logger.log(`Executing: ${command}`);
         try {

@@ -57,7 +57,7 @@ def run_script(script_name, script_path, args, description):
         print(f"❌ Error: Script '{script_path}' not found.")
         return False
 
-    cmd = ["python3", script_path] + args
+    cmd = [sys.executable, script_path] + args
     print(f"Running: {' '.join(cmd)}\n")
 
     try:
@@ -97,6 +97,9 @@ Auto-Generated:
 
 def main():
     """Main orchestration function."""
+    # Ensure stdout handles UTF-8 (emojis)
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
 
     # Check if correct number of arguments provided
     if len(sys.argv) != 7:
@@ -158,7 +161,8 @@ def main():
     # Step 1: Run merger.py
     # ====================
     if 'hf' in promote_branch_x:
-        promote_branch_x_1 = input("Enter previous stable release branch: ").strip()
+        # Note: In an automated environment, we shouldn't ask for input.
+        # However, we keep the logic structure.
         merger_args = [
             lower_env,
             higher_env,

@@ -1,10 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 
 export default function DeployPage() {
+    const params = useParams();
+    const projectId = params.id as string;
+    const [project, setProject] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [fetchingProject, setFetchingProject] = useState(true);
     const [result, setResult] = useState<any>(null);
+
+    useEffect(() => {
+        async function fetchProject() {
+            try {
+                const res = await fetch(`http://localhost:3001/api/projects/${projectId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setProject(data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch project context:', err);
+            } finally {
+                setFetchingProject(false);
+            }
+        }
+        fetchProject();
+    }, [projectId]);
 
     const handleDeploy = async (type: string) => {
         setLoading(true);
@@ -12,7 +34,7 @@ export default function DeployPage() {
             const res = await fetch('http://localhost:3001/api/cd/deploy', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type }),
+                body: JSON.stringify({ type, projectId }),
             });
             const data = await res.json();
             setResult(data);
@@ -23,9 +45,14 @@ export default function DeployPage() {
         }
     };
 
+    if (fetchingProject) return <div>Loading project context...</div>;
+
     return (
         <div style={{ maxWidth: '800px' }}>
-            <h1 style={{ fontSize: '1.875rem', fontWeight: 700, marginBottom: '2rem' }}>Deploy</h1>
+            <div style={{ marginBottom: '2rem' }}>
+                <h1 style={{ fontSize: '1.875rem', fontWeight: 700, marginBottom: '0.5rem' }}>Deploy</h1>
+                <p style={{ color: 'var(--muted-foreground)' }}>Project: <strong>{project?.displayName || projectId}</strong></p>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
                 <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>

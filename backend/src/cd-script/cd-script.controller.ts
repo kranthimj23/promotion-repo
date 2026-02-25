@@ -7,6 +7,7 @@ export class CDScriptController {
 
     @Post('create-release-note')
     async createReleaseNote(@Body() params: {
+        projectId: string;
         lowerEnv: string;
         higherEnv: string;
         sourceBranch: string;
@@ -17,6 +18,7 @@ export class CDScriptController {
 
     @Post('generate-config')
     async generateConfig(@Body() params: {
+        projectId: string;
         environment: string;
         releaseBranch: string;
     }) {
@@ -25,6 +27,7 @@ export class CDScriptController {
 
     @Post('deploy')
     async deploy(@Body() params: {
+        projectId: string;
         type: string;
     }) {
         return this.cdScriptService.executeDeploy(params);
