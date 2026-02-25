@@ -1,3 +1,32 @@
-myenv/
+# Office temp files
+~$*
 
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependencies
+node_modules/
+backend/node_modules/
+backend/dist/
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
 __pycache__/
+*.pyc
+
+# Environment
+.env
+.env.local
+
+# Claude Code files
+CLAUDE.md
+.claude/
+
+*.log
