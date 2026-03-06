@@ -1,0 +1,5 @@
+INSERT INTO Cards
+(CardID, CustomerID, CardType, CardNumber, ExpiryDate, CreditLimit, Status)
+VALUES
+(5001, 1001, 'Credit', '4111111111111111', DATE '2028-12-31', 10000.00, 'Active'),
+(5002, 1002, 'Debit', '5222222222222222', DATE '2027-10-31', 0.00, 'Active');

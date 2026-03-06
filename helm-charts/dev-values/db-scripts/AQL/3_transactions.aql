@@ -1,0 +1,6 @@
+INSERT INTO Transactions
+(TransactionID, AccountID, TransactionType, Amount, TransactionDate, Description)
+VALUES
+(3001, 2001, 'Deposit', 2000.00, CURRENT_TIMESTAMP, 'Salary Deposit'),
+(3002, 2002, 'Withdrawal', 150.50, CURRENT_TIMESTAMP, 'ATM Withdrawal'),
+(3003, 2003, 'Transfer', 5000.00, CURRENT_TIMESTAMP, 'Vendor Payment');

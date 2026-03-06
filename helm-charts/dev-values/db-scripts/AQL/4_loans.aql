@@ -1,0 +1,5 @@
+INSERT INTO Loans
+(LoanID, CustomerID, LoanType, LoanAmount, InterestRate, StartDate, EndDate, Status)
+VALUES
+(4001, 1001, 'Home Loan', 250000.00, 4.5, CURRENT_DATE, DATE '2045-01-01', 'Approved'),
+(4002, 1002, 'Car Loan', 35000.00, 6.2, CURRENT_DATE, DATE '2030-01-01', 'Approved');

@@ -1,0 +1,6 @@
+INSERT INTO Accounts
+(AccountID, CustomerID, AccountType, Balance, Currency, OpenDate, Status)
+VALUES
+(2001, 1001, 'Savings', 15000.00, 'USD', CURRENT_DATE, 'Active'),
+(2002, 1002, 'Checking', 5200.75, 'USD', CURRENT_DATE, 'Active'),
+(2003, 1003, 'Business', 120000.00, 'USD', CURRENT_DATE, 'Active');
